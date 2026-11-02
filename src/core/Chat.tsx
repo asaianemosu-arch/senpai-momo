@@ -5,6 +5,7 @@ import momoUrl from '../../assets/momo/01.png'
 interface Props {
   role: Role
   messages: Message[]
+  waiting: boolean
   onSend: (text: string) => void
 }
 
@@ -18,17 +19,17 @@ const FACE: Record<Role, string> = {
   staff: '🧑‍🍳',
 }
 
-export function Chat({ role, messages, onSend }: Props) {
+export function Chat({ role, messages, waiting, onSend }: Props) {
   const [draft, setDraft] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
-  }, [messages])
+  }, [messages, waiting])
 
   function send() {
     const text = draft.trim()
-    if (!text) return
+    if (!text || waiting) return
     onSend(text)
     setDraft('')
   }
@@ -46,6 +47,18 @@ export function Chat({ role, messages, onSend }: Props) {
             <div className="bubble">{m.text}</div>
           </div>
         ))}
+        {waiting && (
+          <div className="msg">
+            <div className="who">
+              <img src={momoUrl} alt="" />
+            </div>
+            <div className="bubble thinking" aria-label="モモが考えています">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="composer">

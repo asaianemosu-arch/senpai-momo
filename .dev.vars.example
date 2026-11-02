@@ -1,0 +1,3 @@
+# Copy this file to .dev.vars and put your own key after the "=".
+# .dev.vars is never committed. In production the key lives in Cloudflare's secrets.
+ANTHROPIC_API_KEY=
