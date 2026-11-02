@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { MOMO_CORE } from '../src/core/momo-prompt'
 import { BAKERY_KNOWLEDGE } from '../src/trades/bakery/prompt'
 import { bakery } from '../src/trades/bakery'
-import type { MomoRequest, MomoResponse } from '../src/core/api'
+import type { MomoRequest, TalkResponse, WriteResponse } from '../src/core/api'
 
 interface Env {
   ANTHROPIC_API_KEY?: string
@@ -24,8 +24,12 @@ const FROM_STAFF = '【スタッフから】'
 const SECTIONS = bakery.shelf.map((s) => s.id) as [string, ...string[]]
 const SECTION_LIST = bakery.shelf.map((s) => `${s.id}：${s.icon} ${s.title}`).join('\n')
 
-const Turn = z.object({
+const Talk = z.object({
   reply: z.string(),
+  asks: z.array(z.string()),
+})
+
+const Write = z.object({
   updates: z.array(
     z.object({
       section: z.enum(SECTIONS),
@@ -58,6 +62,7 @@ function isValid(body: unknown): body is MomoRequest {
   return (
     !!b &&
     (b.role === 'chef' || b.role === 'staff') &&
+    (b.step === 'talk' || (b.step === 'write' && b.role === 'chef')) &&
     typeof b.localTime === 'string' &&
     b.localTime.length <= 40 &&
     SECTIONS.includes(b.openSection) &&
@@ -82,15 +87,9 @@ function askedLastTime(req: MomoRequest): boolean {
   return !!last && /[？?]/.test(last.text)
 }
 
-function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
-  const messages: Anthropic.Beta.BetaMessageParam[] = []
-  for (const m of req.messages) {
-    // Momo's greeting comes first on screen; the API needs a user turn first.
-    if (messages.length === 0 && m.from === 'momo') continue
-    messages.push({ role: m.from === 'momo' ? 'assistant' : 'user', content: m.text })
-  }
+function context(req: MomoRequest): string[] {
   const who = req.role === 'chef' ? 'シェフ' : 'スタッフ'
-  const notes = [
+  return [
     'モモは画面のはじめに、もうあいさつと名乗りを済ませています。',
     `いまの日時（相手の端末）：${req.localTime}`,
     `いま話している相手：${who}`,
@@ -100,42 +99,68 @@ function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
     `モモの心覚え：${JSON.stringify(req.asks)}`,
     '会話は最近のぶんだけです。それより前に聞いたことは、マニュアルに書いてあります。',
   ]
-  if (req.role === 'chef' && askedLastTime(req)) {
-    notes.push('前の返事で問いかけたので、今回は問いかけず、受け止めて返すだけにします。「？」もお願いも入れない。')
+}
+
+function conversation(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
+  const messages: Anthropic.Beta.BetaMessageParam[] = []
+  for (const m of req.messages) {
+    // Momo's greeting comes first on screen; the API needs a user turn first.
+    if (messages.length === 0 && m.from === 'momo') continue
+    messages.push({ role: m.from === 'momo' ? 'assistant' : 'user', content: m.text })
   }
-  messages.push({ role: 'system', content: notes.join('\n') })
   return messages
 }
 
-async function momo(req: MomoRequest, apiKey: string): Promise<MomoResponse> {
-  const client = new Anthropic({ apiKey })
+const SORRY = 'ごめんなさい、うまくお返事できませんでした。言い方を変えて、もう一度話してもらえますか？'
+
+// Momo's reply only. Kept light so it comes back quickly.
+async function talk(client: Anthropic, req: MomoRequest): Promise<TalkResponse> {
+  const notes = [
+    ...context(req),
+    '今回は返事だけをします。紙はこのあと別に書くので、どこに書いたかは言いません。',
+  ]
+  if (req.role === 'chef' && askedLastTime(req)) {
+    notes.push('前の返事で問いかけたので、今回は問いかけず、受け止めて返すだけにします。「？」もお願いも入れない。')
+  }
+  const response = await client.beta.messages.parse({
+    model: MODEL,
+    max_tokens: 4000,
+    betas: ['server-side-fallback-2026-07-01'],
+    fallbacks: 'default',
+    output_config: { effort: 'low', format: betaZodOutputFormat(Talk) },
+    system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
+    messages: [...conversation(req), { role: 'system', content: notes.join('\n') }],
+  })
+  const turn = response.parsed_output
+  if (response.stop_reason === 'refusal' || !turn) return { reply: SORRY, asks: req.asks }
+  // What staff asked and Momo could not answer is kept, quietly, for her
+  // next talk with the chef. With the chef, the notes are kept by "write".
+  if (req.role !== 'chef') {
+    const fromStaff = turn.asks.filter((a) => a.startsWith(FROM_STAFF) && !req.asks.includes(a))
+    return { reply: turn.reply, asks: [...req.asks, ...fromStaff].slice(-MAX_ASKS) }
+  }
+  return { reply: turn.reply, asks: req.asks }
+}
+
+// The paper, written after Momo has replied. Only the chef changes the manual.
+async function write(client: Anthropic, req: MomoRequest): Promise<WriteResponse> {
+  const notes = [
+    ...context(req),
+    '（ここからは、モモが紙を書く時間です。シェフへの返事はもう済んでいます。ここまでの会話をもとに、マニュアルと心覚えを書きます。）',
+  ]
   const response = await client.beta.messages.parse({
     model: MODEL,
     max_tokens: 16000,
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
-    output_config: { effort: 'medium', format: betaZodOutputFormat(Turn) },
+    output_config: { effort: 'medium', format: betaZodOutputFormat(Write) },
     system: [{ type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } }],
-    messages: toApiMessages(req),
+    // A system message cannot follow Momo's own reply, so the notes come as a user turn.
+    messages: [...conversation(req), { role: 'user', content: notes.join('\n') }],
   })
-
   const turn = response.parsed_output
-  if (response.stop_reason === 'refusal' || !turn) {
-    return {
-      reply: 'ごめんなさい、うまくお返事できませんでした。言い方を変えて、もう一度話してもらえますか？',
-      updates: [],
-      filed: '',
-      asks: req.asks,
-    }
-  }
-  // Only the chef changes the manual; staff only read it. What staff asked
-  // and Momo could not answer is kept, quietly, for her next talk with the chef.
-  if (req.role !== 'chef') {
-    const fromStaff = turn.asks.filter((a) => a.startsWith(FROM_STAFF) && !req.asks.includes(a))
-    return { reply: turn.reply, updates: [], filed: '', asks: [...req.asks, ...fromStaff].slice(-MAX_ASKS) }
-  }
+  if (response.stop_reason === 'refusal' || !turn) return { updates: [], filed: '', asks: req.asks }
   return {
-    reply: turn.reply,
     updates: turn.updates.map((u) => ({
       ...u,
       bundles: u.bundles.map((b) => ({
@@ -149,6 +174,11 @@ async function momo(req: MomoRequest, apiKey: string): Promise<MomoResponse> {
     filed: turn.filed,
     asks: turn.asks.slice(0, MAX_ASKS),
   }
+}
+
+async function momo(req: MomoRequest, apiKey: string) {
+  const client = new Anthropic({ apiKey })
+  return req.step === 'talk' ? talk(client, req) : write(client, req)
 }
 
 export default {

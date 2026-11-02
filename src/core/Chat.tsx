@@ -6,6 +6,8 @@ interface Props {
   role: Role
   messages: Message[]
   waiting: boolean
+  // Momo is writing the paper behind the conversation.
+  writing?: boolean
   onSend: (text: string) => void
   // On a phone the paper is hidden; this opens it from the conversation.
   onShowPaper?: (sectionId?: string) => void
@@ -21,13 +23,13 @@ const FACE: Record<Role, string> = {
   staff: '🙋',
 }
 
-export function Chat({ role, messages, waiting, onSend, onShowPaper }: Props) {
+export function Chat({ role, messages, waiting, writing, onSend, onShowPaper }: Props) {
   const [draft, setDraft] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
-  }, [messages, waiting])
+  }, [messages, waiting, writing])
 
   function send() {
     const text = draft.trim()
@@ -57,6 +59,7 @@ export function Chat({ role, messages, waiting, onSend, onShowPaper }: Props) {
             )}
           </div>
         ))}
+        {writing && !waiting && <p className="writing">📝 モモが紙に書いています…</p>}
         {waiting && (
           <div className="msg">
             <div className="who">

@@ -299,3 +299,6 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
   border-radius: 99px; padding: 0 7px; margin-right: 6px; vertical-align: 1px;
 }
 .remind-in { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; margin-top: 6px; }
+
+.writing { font-size: 13px; color: var(--mute); margin: -6px 0 14px 52px; opacity: .5; animation: blink 1.6s infinite; }
+.narrow .writing { margin-left: 46px; }

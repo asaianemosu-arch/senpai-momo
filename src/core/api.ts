@@ -2,7 +2,12 @@ import type { Message, PaperBody, Role } from './types'
 
 // The shape of one turn between the screen and the relay (worker/index.ts).
 
+// Momo answers first ("talk"), then writes the paper behind ("write", chef only),
+// so the chef does not wait for the paper to read her reply.
+export type MomoStep = 'talk' | 'write'
+
 export interface MomoRequest {
+  step: MomoStep
   role: Role
   localTime: string
   openSection: string
@@ -16,14 +21,20 @@ export interface PaperUpdate extends PaperBody {
   note: string
 }
 
-export interface MomoResponse {
+export interface TalkResponse {
   reply: string
+  asks: string[]
+}
+
+export interface WriteResponse {
   updates: PaperUpdate[]
   filed: string
   asks: string[]
 }
 
-export async function askMomo(req: MomoRequest): Promise<MomoResponse> {
+export async function askMomo(req: MomoRequest & { step: 'talk' }): Promise<TalkResponse>
+export async function askMomo(req: MomoRequest & { step: 'write' }): Promise<WriteResponse>
+export async function askMomo(req: MomoRequest): Promise<TalkResponse | WriteResponse> {
   const res = await fetch('/api/momo', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },

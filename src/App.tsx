@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Manual, Message, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
@@ -56,6 +56,8 @@ export function App() {
   const [editing, setEditing] = useState(false)
   const [reviewing, setReviewing] = useState(false)
   const [waiting, setWaiting] = useState(false)
+  const [writingCount, setWritingCount] = useState(0)
+  const writing = useRef(Promise.resolve())
   const narrow = useNarrow()
   const [shelfOpen, setShelfOpen] = useState(false)
   const [paperOpen, setPaperOpen] = useState(false)
@@ -65,6 +67,10 @@ export function App() {
   const [staffLog, setStaffLog] = usePersistent<Message[]>('log:staff', [
     { from: 'momo', text: trade.greetings.staff },
   ])
+
+  // Paper writing runs after the reply; it reads the newest manual from here.
+  const latest = useRef({ manual, asks })
+  latest.current = { manual, asks }
 
   const messages = role === 'chef' ? chefLog : staffLog
   const setMessages = role === 'chef' ? setChefLog : setStaffLog
@@ -94,41 +100,61 @@ export function App() {
 
   async function send(text: string) {
     const log: Message[] = [...messages, { from: role, text }]
+    const ask = { role, localTime: now(), openSection: item.id }
     setMessages(log)
     setWaiting(true)
+    let after: Message[]
     try {
-      const res = await askMomo({
-        role,
-        localTime: now(),
-        openSection: item.id,
-        manual: shown,
-        asks,
-        messages: log.slice(-RECENT),
-      })
-      setMessages([
-        ...log,
-        {
-          from: 'momo',
-          text: res.reply,
-          filed: res.filed || undefined,
-          filedTo: res.updates[0]?.section,
-        },
-      ])
-      setAsks(res.asks)
-      if (res.updates.length > 0) {
-        setManual((all) => {
-          const next = { ...all }
-          for (const u of res.updates) {
-            const history = [...(all[u.section]?.history ?? []), `${today()}　${u.note}`]
-            next[u.section] = { rules: u.rules, bundles: u.bundles, history }
-          }
-          return next
-        })
-      }
+      const res = await askMomo({ ...ask, step: 'talk', manual: shown, asks, messages: log.slice(-RECENT) })
+      after = [...log, { from: 'momo', text: res.reply }]
+      setMessages(after)
+      if (role === 'staff') setAsks(res.asks)
     } catch {
       setMessages([...log, { from: 'momo', text: SORRY }])
+      return
     } finally {
       setWaiting(false)
+    }
+    // The chef reads Momo's reply right away; the paper is written behind,
+    // one at a time, each on top of the latest manual.
+    if (role === 'chef') {
+      const at = after.length - 1
+      writing.current = writing.current.then(() => writePaper(ask, after, at))
+    }
+  }
+
+  async function writePaper(ask: { role: Role; localTime: string; openSection: string }, log: Message[], at: number) {
+    setWritingCount((n) => n + 1)
+    try {
+      const current: Record<string, PaperBody> = {}
+      for (const [id, paper] of Object.entries(latest.current.manual)) {
+        current[id] = { rules: paper.rules, bundles: paper.bundles }
+      }
+      const res = await askMomo({
+        ...ask,
+        step: 'write',
+        manual: current,
+        asks: latest.current.asks,
+        messages: log.slice(-RECENT),
+      })
+      setAsks(res.asks)
+      if (res.updates.length === 0) return
+      setManual((all) => {
+        const next = { ...all }
+        for (const u of res.updates) {
+          const history = [...(all[u.section]?.history ?? []), `${today()}　${u.note}`]
+          next[u.section] = { rules: u.rules, bundles: u.bundles, history }
+        }
+        return next
+      })
+      if (res.filed) {
+        const filed = { filed: res.filed, filedTo: res.updates[0]?.section }
+        setChefLog((all) => all.map((m, i) => (i === at && m.from === 'momo' ? { ...m, ...filed } : m)))
+      }
+    } catch {
+      // The reply is already there; a missed paper is written with the next one.
+    } finally {
+      setWritingCount((n) => n - 1)
     }
   }
 
@@ -175,6 +201,7 @@ export function App() {
       role={role}
       messages={messages}
       waiting={waiting}
+      writing={role === 'chef' && writingCount > 0}
       onSend={send}
       onShowPaper={
         narrow
