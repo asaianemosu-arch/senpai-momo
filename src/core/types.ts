@@ -23,12 +23,16 @@ export interface Step {
   link: string | null
   // The chef stressed it ("don't forget", "people often get this wrong").
   remind?: boolean
+  // One emoji picturing the action, shown big and cute to staff.
+  icon?: string
 }
 
 // A small group of steps inside one part of the day (e.g. "getting ready").
 export interface Bundle {
   icon: string
   title: string
+  // One line saying what the bundle is about, shown when it is folded.
+  summary?: string
   note: string
   steps: Step[]
   tips: Tip[]
@@ -53,6 +57,15 @@ export interface Message {
   filed?: string
   // The first part of the shelf she wrote to, opened by "紙を見る".
   filedTo?: string
+  // The steps Momo points to when she answers staff ("ここですよ").
+  show?: Focus
+}
+
+export interface Focus {
+  section: string
+  bundle: string
+  // 1-based step numbers.
+  steps: number[]
 }
 
 export interface Trade {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Message, Role } from './types'
 import momoUrl from '../../assets/momo/01.png'
 
@@ -9,6 +9,8 @@ interface Props {
   // Momo is writing the paper behind the conversation.
   writing?: boolean
   onSend: (text: string) => void
+  // What Momo points to under her reply, made big ("ここですよ").
+  cardFor?: (m: Message) => ReactNode
   // On a phone the paper is hidden; this opens it from the conversation.
   onShowPaper?: (sectionId?: string) => void
 }
@@ -23,7 +25,7 @@ const FACE: Record<Role, string> = {
   staff: '🙋',
 }
 
-export function Chat({ role, messages, waiting, writing, onSend, onShowPaper }: Props) {
+export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShowPaper }: Props) {
   const [draft, setDraft] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
 
@@ -51,6 +53,7 @@ export function Chat({ role, messages, waiting, writing, onSend, onShowPaper }: 
               </div>
               <div className="bubble">{m.text}</div>
             </div>
+            {cardFor?.(m)}
             {m.filed && <p className="filed">→ {m.filed}</p>}
             {m.filed && onShowPaper && (
               <button type="button" className="open-paper" onClick={() => onShowPaper(m.filedTo)}>

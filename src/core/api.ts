@@ -1,4 +1,4 @@
-import type { Message, PaperBody, Role } from './types'
+import type { Focus, Message, PaperBody, Role } from './types'
 
 // The shape of one turn between the screen and the relay (worker/index.ts).
 
@@ -24,6 +24,8 @@ export interface PaperUpdate extends PaperBody {
 export interface TalkResponse {
   reply: string
   asks: string[]
+  // Staff only: where in the manual Momo points while answering.
+  show?: Focus
 }
 
 export interface WriteResponse {

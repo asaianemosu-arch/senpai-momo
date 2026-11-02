@@ -7,6 +7,7 @@ import { MOMO_CORE } from '../src/core/momo-prompt'
 import { BAKERY_KNOWLEDGE } from '../src/trades/bakery/prompt'
 import { bakery } from '../src/trades/bakery'
 import type { MomoRequest, TalkResponse, WriteResponse } from '../src/core/api'
+import type { Focus } from '../src/core/types'
 
 interface Env {
   ANTHROPIC_API_KEY?: string
@@ -27,6 +28,11 @@ const SECTION_LIST = bakery.shelf.map((s) => `${s.id}：${s.icon} ${s.title}`).j
 const Talk = z.object({
   reply: z.string(),
   asks: z.array(z.string()),
+  show: z.object({
+    section: z.enum([...SECTIONS, 'none']),
+    bundle: z.string(),
+    steps: z.array(z.number().int()),
+  }),
 })
 
 const Write = z.object({
@@ -39,6 +45,7 @@ const Write = z.object({
         z.object({
           icon: z.string(),
           title: z.string(),
+          summary: z.string(),
           note: z.string(),
           steps: z.array(
             z.object({
@@ -46,6 +53,7 @@ const Write = z.object({
               why: z.string(),
               link: z.string(),
               remind: z.boolean(),
+              icon: z.string(),
             }),
           ),
           tips: z.array(z.object({ label: z.string(), text: z.string() })),
@@ -137,9 +145,22 @@ async function talk(client: Anthropic, req: MomoRequest): Promise<TalkResponse> 
   // next talk with the chef. With the chef, the notes are kept by "write".
   if (req.role !== 'chef') {
     const fromStaff = turn.asks.filter((a) => a.startsWith(FROM_STAFF) && !req.asks.includes(a))
-    return { reply: turn.reply, asks: [...req.asks, ...fromStaff].slice(-MAX_ASKS) }
+    return {
+      reply: turn.reply,
+      asks: [...req.asks, ...fromStaff].slice(-MAX_ASKS),
+      show: pointTo(req, turn.show),
+    }
   }
   return { reply: turn.reply, asks: req.asks }
+}
+
+// Keep only a pointer to steps that really exist in the manual the staff see.
+function pointTo(req: MomoRequest, show: z.infer<typeof Talk>['show']): Focus | undefined {
+  if (show.section === 'none') return undefined
+  const bundle = req.manual[show.section]?.bundles.find((b) => b.title === show.bundle)
+  if (!bundle) return undefined
+  const steps = [...new Set(show.steps)].filter((n) => n >= 1 && n <= bundle.steps.length).sort((a, b) => a - b)
+  return steps.length ? { section: show.section, bundle: bundle.title, steps } : undefined
 }
 
 // The paper, written after Momo has replied. Only the chef changes the manual.

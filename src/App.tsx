@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react'
-import type { Manual, Message, PaperBody, Role, ShelfItem } from './core/types'
+import type { Focus, Manual, Message, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
 import { Shelf } from './core/Shelf'
 import { Chat } from './core/Chat'
 import { PaperView } from './core/PaperView'
+import { StaffPaper } from './core/StaffPaper'
+import { ShowCard } from './core/ShowCard'
 import { Review, changesSince } from './core/Review'
 import { useNarrow } from './core/useNarrow'
 import momoUrl from '../assets/momo/01.png'
@@ -57,6 +59,8 @@ export function App() {
   const [reviewing, setReviewing] = useState(false)
   const [waiting, setWaiting] = useState(false)
   const [writingCount, setWritingCount] = useState(0)
+  // The steps Momo last pointed to for staff; that bundle opens on their paper.
+  const [focus, setFocus] = useState<Focus | null>(null)
   const writing = useRef(Promise.resolve())
   const narrow = useNarrow()
   const [shelfOpen, setShelfOpen] = useState(false)
@@ -106,9 +110,15 @@ export function App() {
     let after: Message[]
     try {
       const res = await askMomo({ ...ask, step: 'talk', manual: shown, asks, messages: log.slice(-RECENT) })
-      after = [...log, { from: 'momo', text: res.reply }]
+      after = [...log, { from: 'momo', text: res.reply, show: res.show }]
       setMessages(after)
-      if (role === 'staff') setAsks(res.asks)
+      if (role === 'staff') {
+        setAsks(res.asks)
+        if (res.show) {
+          setFocus(res.show)
+          if (!narrow) setOpenId(res.show.section)
+        }
+      }
     } catch {
       setMessages([...log, { from: 'momo', text: SORRY }])
       return
@@ -202,6 +212,12 @@ export function App() {
       messages={messages}
       waiting={waiting}
       writing={role === 'chef' && writingCount > 0}
+      cardFor={(m) => {
+        if (role !== 'staff' || !m.show) return null
+        const bundle = published[m.show.section]?.bundles.find((b) => b.title === m.show!.bundle)
+        if (!bundle || m.show.steps.some((n) => !bundle.steps[n - 1])) return null
+        return <ShowCard focus={m.show} where={titleOf(m.show.section)} bundle={bundle} />
+      }}
       onSend={send}
       onShowPaper={
         narrow
@@ -214,7 +230,16 @@ export function App() {
     />
   )
 
-  const paperView = (
+  const paperView = role === 'staff' ? (
+    <StaffPaper
+      item={item}
+      paper={published[item.id]}
+      focus={focus}
+      titleOf={titleOf}
+      onOpen={setOpenId}
+      onClose={narrow ? () => setPaperOpen(false) : undefined}
+    />
+  ) : (
     <PaperView
       role={role}
       item={item}

@@ -302,3 +302,42 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 
 .writing { font-size: 13px; color: var(--mute); margin: -6px 0 14px 52px; opacity: .5; animation: blink 1.6s infinite; }
 .narrow .writing { margin-left: 46px; }
+
+/* ---------- staff: "ここですよ" and the folded paper ---------- */
+:root { --peach: #ffe9df; --mint: #e3f4ec; --sky: #e6f0fb; --lemon: #fff6d6; --lilac: #efe7f8; }
+.illust { width: 56px; height: 56px; border-radius: 18px; display: grid; place-items: center; font-size: 30px; flex: none; }
+.illust.peach { background: var(--peach); } .illust.mint { background: var(--mint); } .illust.sky { background: var(--sky); }
+.illust.lemon { background: var(--lemon); } .illust.lilac { background: var(--lilac); }
+.num {
+  width: 34px; height: 34px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700;
+  display: grid; place-items: center; flex: none; position: relative; font-size: 17px;
+}
+.num::after { content: "♥"; position: absolute; top: -8px; right: -6px; font-size: 12px; color: #f19aa9; }
+
+.show {
+  margin: -6px 0 16px 52px; border: 2px solid var(--accent-soft); border-radius: 18px; background: var(--pane);
+  overflow: hidden; box-shadow: 0 4px 14px rgba(200, 68, 90, .10);
+}
+.show-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 14px; background: var(--accent-soft); font-size: 13px; color: var(--accent); font-weight: 700; }
+.show-head .where { color: var(--mute); font-weight: 400; }
+.bigstep { display: flex; gap: 14px; align-items: center; padding: 12px 14px; border-top: 1px dashed var(--line); }
+.bigstep:first-of-type { border-top: none; }
+.bigstep .t { font-size: 18px; line-height: 1.5; }
+.narrow .show { margin-left: 0; }
+.narrow .bigstep { gap: 10px; padding: 10px 12px; }
+.narrow .bigstep .illust { width: 50px; height: 50px; font-size: 26px; border-radius: 16px; }
+.narrow .bigstep .t { font-size: 16px; }
+
+.staff-paper .fold { background: var(--pane); border: 1px solid var(--line); border-radius: 16px; margin-bottom: 10px; overflow: hidden; }
+.staff-paper .fold.open { border: 2px solid var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.fold-top { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: none; background: transparent; text-align: left; }
+.fold-top .illust { width: 46px; height: 46px; font-size: 24px; border-radius: 15px; }
+.fold-top b { display: block; font-size: 15px; }
+.fold-top small { display: block; color: var(--mute); font-size: 13px; line-height: 1.4; }
+.fold-top .chev { color: var(--mute); }
+.fold-body { padding: 0 12px 10px; }
+.ostep { display: flex; gap: 10px; align-items: center; padding: 6px; border-radius: 12px; font-size: 15px; }
+.ostep .n { width: 24px; height: 24px; border-radius: 50%; background: var(--line); font-size: 13px; display: grid; place-items: center; flex: none; }
+.ostep .illust { width: 38px; height: 38px; font-size: 20px; border-radius: 12px; }
+.ostep.lit { background: var(--accent-soft); }
+.ostep.lit .n { background: var(--accent); color: #fff; }
