@@ -33,6 +33,8 @@ function isValid(body: unknown): body is MomoRequest {
   return (
     !!b &&
     (b.role === 'chef' || b.role === 'staff') &&
+    typeof b.localTime === 'string' &&
+    b.localTime.length <= 40 &&
     typeof b.sectionTitle === 'string' &&
     Array.isArray(b.messages) &&
     b.messages.length > 0 &&
@@ -62,6 +64,7 @@ function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
   const who = req.role === 'chef' ? 'シェフ' : '新人さん'
   const notes = [
     'モモは画面のはじめに、もうあいさつと名乗りを済ませています。',
+    `いまの日時（相手の端末）：${req.localTime}`,
     `いま話している相手：${who}`,
     `いま開いている紙：「${req.sectionTitle}」`,
     `いまの紙の中身：${JSON.stringify(req.paper)}`,

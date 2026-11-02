@@ -4,6 +4,7 @@ import type { Message, Paper, Role } from './types'
 
 export interface MomoRequest {
   role: Role
+  localTime: string
   sectionTitle: string
   paper: Omit<Paper, 'history'>
   messages: Message[]

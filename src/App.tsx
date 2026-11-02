@@ -24,6 +24,13 @@ function today() {
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
+function now() {
+  const d = new Date()
+  const day = '日月火水木金土'[d.getDay()]
+  const time = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${today()}（${day}）${time}`
+}
+
 const ROLES:{ role: Role; label: string }[] = [
   { role: 'chef', label: '👨‍🍳 シェフ（教える）' },
   { role: 'staff', label: '🧑‍🍳 スタッフ（使う）' },
@@ -53,6 +60,7 @@ export function App() {
     try {
       const res = await askMomo({
         role,
+        localTime: now(),
         sectionTitle: item.title,
         paper: { steps: paper.steps, tips: paper.tips, asks: paper.asks },
         messages: log,
