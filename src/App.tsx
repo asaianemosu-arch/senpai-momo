@@ -8,6 +8,7 @@ import { PaperView } from './core/PaperView'
 import { StaffPaper } from './core/StaffPaper'
 import { ShowCard } from './core/ShowCard'
 import { Timetable } from './core/Timetable'
+import { Splash } from './core/Splash'
 import { Review, changesSince } from './core/Review'
 import { useNarrow } from './core/useNarrow'
 import momoUrl from '../assets/momo/01.png'
@@ -66,9 +67,8 @@ export function App() {
   const [writingCount, setWritingCount] = useState(0)
   // The steps Momo last pointed to for staff; that bundle opens on their paper.
   const [focus, setFocus] = useState<Focus | null>(null)
-  // Momo is drawn in light when the app opens and when the chef starts talking.
-  const [light, setLight] = useState(0)
-  const talked = useRef(false)
+  // Momo is drawn in light in the middle of the screen when the app opens.
+  const [splash, setSplash] = useState(true)
   const writing = useRef(Promise.resolve())
   const narrow = useNarrow()
   const [shelfOpen, setShelfOpen] = useState(false)
@@ -128,10 +128,6 @@ export function App() {
   async function send(text: string) {
     const log: Message[] = [...messages, { from: role, text }]
     const ask = { role, localTime: now(), openSection: item.id }
-    if (role === 'chef' && !talked.current) {
-      talked.current = true
-      setLight((n) => n + 1)
-    }
     setMessages(log)
     setWaiting(true)
     let after: Message[]
@@ -223,7 +219,6 @@ export function App() {
       items={trade.shelf}
       contents={contents}
       openId={item.id}
-      light={light}
       onOpen={(id) => {
         setOpenId(id)
         if (narrow) {
@@ -297,7 +292,7 @@ export function App() {
   )
 
   return (
-    <div className={narrow ? 'frame narrow' : 'frame'}>
+    <div className={['frame', narrow && 'narrow', splash && 'splashing'].filter(Boolean).join(' ')}>
       {narrow ? (
         <>
           <div className="mbar">
@@ -305,7 +300,7 @@ export function App() {
               📚
             </button>
             <div className="mbar-momo">
-              <img src={momoUrl} alt="" />
+              <img src={momoUrl} alt="" className="light-target" />
               <div>
                 <b>先輩店員 Momo</b>
                 <small>{trade.shopName}</small>
@@ -342,6 +337,8 @@ export function App() {
           </div>
         </>
       )}
+
+      {splash && <Splash src={momoUrl} onEnd={() => setSplash(false)} />}
 
       {reviewing && (
         <Review

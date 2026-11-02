@@ -1,6 +1,5 @@
 import type { ShelfItem } from './types'
 import momoUrl from '../../assets/momo/01.png'
-import { LightMomo } from './LightMomo'
 
 interface Props {
   shopName: string
@@ -9,15 +8,13 @@ interface Props {
   contents: Record<string, string>
   openId: string
   onOpen: (id: string) => void
-  // Changing this draws Momo in light again.
-  light: number
 }
 
-export function Shelf({ shopName, items, contents, openId, onOpen, light }: Props) {
+export function Shelf({ shopName, items, contents, openId, onOpen }: Props) {
   return (
     <section className="side">
       <div className="momo">
-        <LightMomo src={momoUrl} playKey={light} />
+        <img src={momoUrl} alt="モモ" className="light-target" />
         <div className="momo-name">先輩店員 Momo</div>
         <div className="momo-shop">{shopName}</div>
         <div className="momo-things">
@@ -32,7 +29,7 @@ export function Shelf({ shopName, items, contents, openId, onOpen, light }: Prop
   )
 }
 
-function ShelfList({ items, contents, openId, onOpen }: Omit<Props, 'shopName' | 'light'>) {
+function ShelfList({ items, contents, openId, onOpen }: Omit<Props, 'shopName'>) {
   return (
     <ul className="shelf">
       {items.map((item) => (

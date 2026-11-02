@@ -2,13 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 
 interface Props {
   src: string
-  // Changing this plays the light again.
-  playKey: number
+  // Picture size in px; the light gathers from the whole box around it.
+  size: number
+  // Time for each dot to arrive, and the spread of their start times (ms).
+  duration?: number
+  stagger?: number
+  onDone?: () => void
 }
-
-const IMG = 170
-const DURATION = 1600
-const STAGGER = 700
 
 const ease = (t: number) => 1 - Math.pow(1 - t, 3)
 
@@ -26,7 +26,7 @@ interface Dot {
 
 // Momo drawn by light: dots of light gather from around into her shape,
 // taking her colours as they arrive, then the picture itself appears.
-export function LightMomo({ src, playKey }: Props) {
+export function LightMomo({ src, size, duration = 1600, stagger = 700, onDone }: Props) {
   const box = useRef<HTMLDivElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const [shown, setShown] = useState(false)
@@ -37,6 +37,7 @@ export function LightMomo({ src, playKey }: Props) {
     if (!el || !holder) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setShown(true)
+      onDone?.()
       return
     }
     setShown(false)
@@ -57,9 +58,9 @@ export function LightMomo({ src, playKey }: Props) {
       el.style.transition = 'none'
       el.style.opacity = '1'
 
-      const ox = (W - IMG) / 2
-      const oy = (H - IMG) / 2
-      const dots = shapeOf(img, ox, oy, W, H)
+      const ox = (W - size) / 2
+      const oy = (H - size) / 2
+      const dots = shapeOf(img, size, ox, oy, W, H, stagger)
       const start = performance.now()
 
       const draw = (now: number) => {
@@ -67,7 +68,7 @@ export function LightMomo({ src, playKey }: Props) {
         g.clearRect(0, 0, W, H)
         let arrived = 0
         for (const d of dots) {
-          const k = Math.min(1, Math.max(0, (t - d.delay) / DURATION))
+          const k = Math.min(1, Math.max(0, (t - d.delay) / duration))
           if (k >= 1) arrived++
           const e = ease(k)
           const x = d.sx + (d.x - d.sx) * e
@@ -86,29 +87,48 @@ export function LightMomo({ src, playKey }: Props) {
           setShown(true)
           el.style.transition = 'opacity .9s ease'
           el.style.opacity = '0'
+          onDone?.()
           return
         }
         frame = requestAnimationFrame(draw)
       }
       frame = requestAnimationFrame(draw)
     }
-    img.onerror = () => setShown(true)
+    img.onerror = () => {
+      setShown(true)
+      onDone?.()
+    }
     return () => {
       stopped = true
       cancelAnimationFrame(frame)
     }
-  }, [src, playKey])
+    // Plays once per mount.
+  }, [src])
 
   return (
     <div className="light-momo" ref={box}>
-      <img src={src} alt="モモ" className={shown ? 'shown' : ''} />
+      <img
+        src={src}
+        alt="モモ"
+        className={shown ? 'shown' : ''}
+        style={{ width: size, height: size, margin: `${-size / 2}px 0 0 ${-size / 2}px` }}
+      />
       <canvas ref={canvas} aria-hidden="true" />
     </div>
   )
 }
 
 // Points on Momo's shape, with her colours, read from the picture itself.
-function shapeOf(img: HTMLImageElement, ox: number, oy: number, W: number, H: number): Dot[] {
+function shapeOf(
+  img: HTMLImageElement,
+  size: number,
+  ox: number,
+  oy: number,
+  W: number,
+  H: number,
+  stagger: number,
+): Dot[] {
+  const IMG = size
   const c = document.createElement('canvas')
   c.width = c.height = IMG
   const g = c.getContext('2d')
@@ -130,7 +150,7 @@ function shapeOf(img: HTMLImageElement, ox: number, oy: number, W: number, H: nu
         r: data[i],
         g: data[i + 1],
         b: data[i + 2],
-        delay: Math.random() * STAGGER,
+        delay: Math.random() * stagger,
         twinkle: Math.random() * Math.PI * 2,
       })
     }
