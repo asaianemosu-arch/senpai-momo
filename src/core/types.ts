@@ -49,6 +49,8 @@ export interface Message {
   text: string
   // Where Momo put what she heard, shown under her reply.
   filed?: string
+  // The first part of the shelf she wrote to, opened by "紙を見る".
+  filedTo?: string
 }
 
 export interface Trade {

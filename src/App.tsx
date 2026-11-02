@@ -6,6 +6,8 @@ import { Shelf } from './core/Shelf'
 import { Chat } from './core/Chat'
 import { PaperView } from './core/PaperView'
 import { Review, changesSince } from './core/Review'
+import { useNarrow } from './core/useNarrow'
+import momoUrl from '../assets/momo/01.png'
 import { bakery as trade } from './trades/bakery'
 
 function findItem(items: ShelfItem[], id: string): ShelfItem | undefined {
@@ -35,9 +37,9 @@ function now() {
   return `${today()}（${day}）${time}`
 }
 
-const ROLES: { role: Role; label: string }[] = [
-  { role: 'chef', label: '🧑‍🍳 シェフ（教える）' },
-  { role: 'staff', label: '🙋 スタッフ（使う）' },
+const ROLES: { role: Role; icon: string; label: string }[] = [
+  { role: 'chef', icon: '🧑‍🍳', label: 'シェフ（教える）' },
+  { role: 'staff', icon: '🙋', label: 'スタッフ（使う）' },
 ]
 
 export function App() {
@@ -50,6 +52,9 @@ export function App() {
   const [editing, setEditing] = useState(false)
   const [reviewing, setReviewing] = useState(false)
   const [waiting, setWaiting] = useState(false)
+  const narrow = useNarrow()
+  const [shelfOpen, setShelfOpen] = useState(false)
+  const [paperOpen, setPaperOpen] = useState(false)
   const [chefLog, setChefLog] = usePersistent<Message[]>('log:chef', [
     { from: 'momo', text: trade.greetings.chef },
   ])
@@ -96,7 +101,15 @@ export function App() {
         asks,
         messages: log,
       })
-      setMessages([...log, { from: 'momo', text: res.reply, filed: res.filed || undefined }])
+      setMessages([
+        ...log,
+        {
+          from: 'momo',
+          text: res.reply,
+          filed: res.filed || undefined,
+          filedTo: res.updates[0]?.section,
+        },
+      ])
       setAsks(res.asks)
       if (res.updates.length > 0) {
         setManual((all) => {
@@ -115,55 +128,125 @@ export function App() {
     }
   }
 
-  return (
-    <div className="frame">
-      <div className="topbar">
-        <div className="title">
-          先輩店員 Momo<small>お店のマニュアルを、話すだけで</small>
-        </div>
-        <div className="roles" role="tablist">
-          {ROLES.map((r) => (
-            <button
-              key={r.role}
-              type="button"
-              role="tab"
-              aria-selected={role === r.role}
-              className={role === r.role ? 'on' : ''}
-              onClick={() => {
-                setEditing(false)
-                setRole(r.role)
-              }}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="app">
-        <Shelf
-          shopName={trade.shopName}
-          items={trade.shelf}
-          contents={contents}
-          openId={item.id}
-          onOpen={setOpenId}
-        />
-        <Chat role={role} messages={messages} waiting={waiting} onSend={send} />
-        <PaperView
-          role={role}
-          item={item}
-          paper={role === 'chef' ? manual[item.id] : published[item.id] && { ...published[item.id], history: [] }}
-          editing={role === 'chef' && editing}
-          onToggleEdit={() => setEditing(!editing)}
-          onPublish={() => {
+  const roles = (
+    <div className="roles" role="tablist">
+      {ROLES.map((r) => (
+        <button
+          key={r.role}
+          type="button"
+          role="tab"
+          aria-selected={role === r.role}
+          aria-label={r.label}
+          className={role === r.role ? 'on' : ''}
+          onClick={() => {
             setEditing(false)
-            setReviewing(true)
+            setRole(r.role)
           }}
-          onChange={(body, note) => edit(item.id, body, note)}
-          titleOf={titleOf}
-          onOpen={setOpenId}
-        />
-      </div>
+        >
+          {r.icon}
+          {!narrow && ` ${r.label}`}
+        </button>
+      ))}
+    </div>
+  )
+
+  const shelf = (
+    <Shelf
+      shopName={trade.shopName}
+      items={trade.shelf}
+      contents={contents}
+      openId={item.id}
+      onOpen={(id) => {
+        setOpenId(id)
+        if (narrow) {
+          setShelfOpen(false)
+          setPaperOpen(true)
+        }
+      }}
+    />
+  )
+
+  const chat = (
+    <Chat
+      role={role}
+      messages={messages}
+      waiting={waiting}
+      onSend={send}
+      onShowPaper={
+        narrow
+          ? (id) => {
+              if (id) setOpenId(id)
+              setPaperOpen(true)
+            }
+          : undefined
+      }
+    />
+  )
+
+  const paperView = (
+    <PaperView
+      role={role}
+      item={item}
+      paper={role === 'chef' ? manual[item.id] : published[item.id] && { ...published[item.id], history: [] }}
+      editing={role === 'chef' && editing}
+      onToggleEdit={() => setEditing(!editing)}
+      onPublish={() => {
+        setEditing(false)
+        setReviewing(true)
+      }}
+      onChange={(body, note) => edit(item.id, body, note)}
+      titleOf={titleOf}
+      onOpen={setOpenId}
+      onClose={narrow ? () => setPaperOpen(false) : undefined}
+    />
+  )
+
+  return (
+    <div className={narrow ? 'frame narrow' : 'frame'}>
+      {narrow ? (
+        <>
+          <div className="mbar">
+            <button type="button" className="icon-btn" aria-label="お店のマニュアル" onClick={() => setShelfOpen(true)}>
+              📚
+            </button>
+            <div className="mbar-momo">
+              <img src={momoUrl} alt="" />
+              <div>
+                <b>先輩店員 Momo</b>
+                <small>{trade.shopName}</small>
+              </div>
+            </div>
+            {roles}
+          </div>
+          {chat}
+          {shelfOpen && (
+            <>
+              <div className="dim" onClick={() => setShelfOpen(false)} />
+              <div className="drawer">{shelf}</div>
+            </>
+          )}
+          {paperOpen && (
+            <>
+              <div className="dim" onClick={() => setPaperOpen(false)} />
+              <div className="sheet">{paperView}</div>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="topbar">
+            <div className="title">
+              先輩店員 Momo<small>お店のマニュアルを、話すだけで</small>
+            </div>
+            {roles}
+          </div>
+          <div className="app">
+            {shelf}
+            {chat}
+            {paperView}
+          </div>
+        </>
+      )}
 
       {reviewing && (
         <Review
@@ -172,6 +255,7 @@ export function App() {
             setReviewing(false)
             setOpenId(id)
             setEditing(true)
+            if (narrow) setPaperOpen(true)
           }}
           onPublish={() => {
             setPublished(bodies)

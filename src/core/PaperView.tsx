@@ -11,6 +11,8 @@ interface Props {
   onChange: (body: PaperBody, note: string) => void
   titleOf: (id: string) => string
   onOpen: (id: string) => void
+  // On a phone the paper slides up over the conversation and can be closed.
+  onClose?: () => void
 }
 
 // Which piece of the paper is open for typing, and what has been typed so far.
@@ -101,32 +103,40 @@ export function PaperView(props: Props) {
       </div>
     )
 
+  const chefButtons = canEdit && !empty && (
+    <>
+      <button
+        type="button"
+        className={editing ? 'edit-toggle on' : 'edit-toggle'}
+        onClick={() => {
+          setDraft(null)
+          props.onToggleEdit()
+        }}
+      >
+        {editing ? '✏️ 直しています' : '✏️ 直す'}
+      </button>
+      <button type="button" className="send-btn" onClick={props.onPublish}>
+        📣 スタッフに配る
+      </button>
+    </>
+  )
+
   const is = (d: Partial<Draft>) =>
     !!draft && Object.entries(d).every(([k, v]) => (draft as Record<string, unknown>)[k] === v)
 
   return (
-    <section className="page">
+    <section className={props.onClose ? 'page sheet-page' : 'page'}>
       <div className="paper">
         <div className="paper-head">
           <h2>
             {item.icon} {item.title}
           </h2>
-          {canEdit && !empty && (
-            <>
-              <button
-                type="button"
-                className={editing ? 'edit-toggle on' : 'edit-toggle'}
-                onClick={() => {
-                  setDraft(null)
-                  props.onToggleEdit()
-                }}
-              >
-                {editing ? '✏️ 直しています' : '✏️ 直す'}
-              </button>
-              <button type="button" className="send-btn" onClick={props.onPublish}>
-                📣 スタッフに配る
-              </button>
-            </>
+          {props.onClose ? (
+            <button type="button" className="close" aria-label="閉じる" onClick={props.onClose}>
+              ✕
+            </button>
+          ) : (
+            chefButtons
           )}
         </div>
 
@@ -282,6 +292,7 @@ export function PaperView(props: Props) {
           </>
         )}
       </div>
+      {props.onClose && chefButtons && <div className="sheet-foot">{chefButtons}</div>}
     </section>
   )
 }

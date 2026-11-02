@@ -7,6 +7,8 @@ interface Props {
   messages: Message[]
   waiting: boolean
   onSend: (text: string) => void
+  // On a phone the paper is hidden; this opens it from the conversation.
+  onShowPaper?: (sectionId?: string) => void
 }
 
 const HEADER: Record<Role, string> = {
@@ -19,7 +21,7 @@ const FACE: Record<Role, string> = {
   staff: '🙋',
 }
 
-export function Chat({ role, messages, waiting, onSend }: Props) {
+export function Chat({ role, messages, waiting, onSend, onShowPaper }: Props) {
   const [draft, setDraft] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
 
@@ -48,6 +50,11 @@ export function Chat({ role, messages, waiting, onSend }: Props) {
               <div className="bubble">{m.text}</div>
             </div>
             {m.filed && <p className="filed">→ {m.filed}</p>}
+            {m.filed && onShowPaper && (
+              <button type="button" className="open-paper" onClick={() => onShowPaper(m.filedTo)}>
+                📄 紙を見る
+              </button>
+            )}
           </div>
         ))}
         {waiting && (
@@ -66,12 +73,20 @@ export function Chat({ role, messages, waiting, onSend }: Props) {
 
       <div className="composer">
         <div className="speak-row">
-          <button type="button" className="ways">✍️ 手書きを読む</button>
+          <button type="button" className="ways">
+            <span className="ways-ic">✍️</span>
+            <span className="long">手書きを読む</span>
+            <span className="short">手書き</span>
+          </button>
           <button type="button" className="mic" aria-label="話す">
             <span className="mic-icon">🎤</span>
             <span className="mic-label">話す</span>
           </button>
-          <button type="button" className="ways">📋 貼る</button>
+          <button type="button" className="ways">
+            <span className="ways-ic">📋</span>
+            <span className="long">貼る</span>
+            <span className="short">貼る</span>
+          </button>
         </div>
         <form
           className="box"
