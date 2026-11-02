@@ -15,16 +15,40 @@ export interface Tip {
   text: string
 }
 
-export interface Paper {
-  steps: string[]
+export interface Step {
+  text: string
+  // Only a reason the chef gave; empty when none.
+  why: string
+  // Another shelf item this step leads to, or null.
+  link: string | null
+}
+
+// A small group of steps inside one part of the day (e.g. "getting ready").
+export interface Bundle {
+  icon: string
+  title: string
+  note: string
+  steps: Step[]
   tips: Tip[]
-  asks: string[]
+}
+
+// What Momo writes for one shelf item.
+export interface PaperBody {
+  rules: string[]
+  bundles: Bundle[]
+}
+
+export interface Paper extends PaperBody {
   history: string[]
 }
+
+export type Manual = Record<string, Paper>
 
 export interface Message {
   from: 'momo' | Role
   text: string
+  // Where Momo put what she heard, shown under her reply.
+  filed?: string
 }
 
 export interface Trade {

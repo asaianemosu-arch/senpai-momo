@@ -40,11 +40,14 @@ export function Chat({ role, messages, waiting, onSend }: Props) {
 
       <div className="log" ref={logRef}>
         {messages.map((m, i) => (
-          <div key={i} className={m.from === 'momo' ? 'msg' : 'msg me'}>
-            <div className="who">
-              {m.from === 'momo' ? <img src={momoUrl} alt="" /> : FACE[m.from]}
+          <div key={i}>
+            <div className={m.from === 'momo' ? 'msg' : 'msg me'}>
+              <div className="who">
+                {m.from === 'momo' ? <img src={momoUrl} alt="" /> : FACE[m.from]}
+              </div>
+              <div className="bubble">{m.text}</div>
             </div>
-            <div className="bubble">{m.text}</div>
+            {m.filed && <p className="filed">→ {m.filed}</p>}
           </div>
         ))}
         {waiting && (

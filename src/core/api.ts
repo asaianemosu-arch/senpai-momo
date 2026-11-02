@@ -1,19 +1,26 @@
-import type { Message, Paper, Role } from './types'
+import type { Message, PaperBody, Role } from './types'
 
 // The shape of one turn between the screen and the relay (worker/index.ts).
 
 export interface MomoRequest {
   role: Role
   localTime: string
-  sectionTitle: string
-  paper: Omit<Paper, 'history'>
+  openSection: string
+  manual: Record<string, PaperBody>
+  asks: string[]
   messages: Message[]
+}
+
+export interface PaperUpdate extends PaperBody {
+  section: string
+  note: string
 }
 
 export interface MomoResponse {
   reply: string
-  paper: Omit<Paper, 'history'>
-  changeNote: string | null
+  updates: PaperUpdate[]
+  filed: string
+  asks: string[]
 }
 
 export async function askMomo(req: MomoRequest): Promise<MomoResponse> {

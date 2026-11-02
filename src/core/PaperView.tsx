@@ -4,10 +4,12 @@ interface Props {
   role: Role
   item: ShelfItem
   paper: Paper | undefined
+  titleOf: (id: string) => string
+  onOpen: (id: string) => void
 }
 
-export function PaperView({ role, item, paper }: Props) {
-  const empty = !paper || (paper.steps.length === 0 && paper.tips.length === 0)
+export function PaperView({ role, item, paper, titleOf, onOpen }: Props) {
+  const empty = !paper || (paper.rules.length === 0 && paper.bundles.length === 0)
 
   return (
     <section className="page">
@@ -24,32 +26,53 @@ export function PaperView({ role, item, paper }: Props) {
           </p>
         ) : (
           <>
-            {paper.steps.length > 0 && (
-              <>
-                <h3>手順</h3>
-                <ol className="steps">
-                  {paper.steps.map((s, i) => (
-                    <li key={i}>{s}</li>
+            {paper.rules.map((r, i) => (
+              <div key={i} className="rule">
+                <b>お店の決まり</b>　{r}
+              </div>
+            ))}
+
+            {paper.bundles.map((b, i) => (
+              <details key={`${item.id}-${i}-${b.title}`} className="bundle" open>
+                <summary>
+                  <span className="ic">{b.icon}</span>
+                  {b.title}
+                  <span className="count">{b.steps.length}つ</span>
+                  <span className="chev">▸</span>
+                </summary>
+                <div className="body">
+                  {b.note && <p className="from">{b.note}</p>}
+                  {b.steps.length > 0 && (
+                    <ol className="steps">
+                      {b.steps.map((s, j) => (
+                        <li key={j}>
+                          {s.text}
+                          {s.why && <span className="why">{s.why}</span>}
+                          {s.link && (
+                            <button type="button" className="link" onClick={() => onOpen(s.link!)}>
+                              {titleOf(s.link)} を見る
+                            </button>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                  {b.tips.map((t, j) => (
+                    <div key={j} className="tip">
+                      <b>{t.label}</b>　{t.text}
+                    </div>
                   ))}
-                </ol>
-              </>
-            )}
-            {paper.tips.length > 0 && (
-              <>
-                <h3>シェフのコツ</h3>
-                {paper.tips.map((t, i) => (
-                  <div key={i} className="tip">
-                    <b>{t.label}</b> {t.text}
-                  </div>
-                ))}
-              </>
-            )}
+                </div>
+              </details>
+            ))}
+
             {paper.history.length > 0 && (
-              <div className="changed">
+              <details className="hist">
+                <summary>書き足しの記録（{paper.history.length}）</summary>
                 {paper.history.map((h, i) => (
                   <div key={i}>{h}</div>
                 ))}
-              </div>
+              </details>
             )}
           </>
         )}

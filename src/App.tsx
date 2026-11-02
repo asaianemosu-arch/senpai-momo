@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Message, Paper, Role, ShelfItem } from './core/types'
+import type { Manual, Message, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
 import { Shelf } from './core/Shelf'
@@ -15,7 +15,10 @@ function findItem(items: ShelfItem[], id: string): ShelfItem | undefined {
   }
 }
 
-const EMPTY_PAPER: Paper = { steps: [], tips: [], asks: [], history: [] }
+function titleOf(id: string) {
+  const item = findItem(trade.shelf, id)
+  return item ? `${item.icon} ${item.title}` : id
+}
 
 const SORRY = 'ごめんなさい、いまお返事ができませんでした。少しして、もう一度送ってもらえますか？'
 
@@ -31,7 +34,7 @@ function now() {
   return `${today()}（${day}）${time}`
 }
 
-const ROLES:{ role: Role; label: string }[] = [
+const ROLES: { role: Role; label: string }[] = [
   { role: 'chef', label: '👨‍🍳 シェフ（教える）' },
   { role: 'staff', label: '🧑‍🍳 スタッフ（使う）' },
 ]
@@ -39,7 +42,8 @@ const ROLES:{ role: Role; label: string }[] = [
 export function App() {
   const [role, setRole] = usePersistent<Role>('role', 'chef')
   const [openId, setOpenId] = usePersistent('open', trade.shelf[0].id)
-  const [papers, setPapers] = usePersistent<Record<string, Paper>>('papers', {})
+  const [manual, setManual] = usePersistent<Manual>('manual', {})
+  const [asks, setAsks] = usePersistent<string[]>('asks', [])
   const [waiting, setWaiting] = useState(false)
   const [chefLog, setChefLog] = usePersistent<Message[]>('log:chef', [
     { from: 'momo', text: trade.greetings.chef },
@@ -52,26 +56,39 @@ export function App() {
   const setMessages = role === 'chef' ? setChefLog : setStaffLog
   const item = findItem(trade.shelf, openId) ?? trade.shelf[0]
 
+  const contents: Record<string, string> = {}
+  for (const [id, paper] of Object.entries(manual)) {
+    contents[id] = paper.bundles.map((b) => b.title).join('・')
+  }
+
   async function send(text: string) {
     const log: Message[] = [...messages, { from: role, text }]
-    const paper = papers[item.id] ?? EMPTY_PAPER
+    const bodies: Record<string, PaperBody> = {}
+    for (const [id, paper] of Object.entries(manual)) {
+      bodies[id] = { rules: paper.rules, bundles: paper.bundles }
+    }
     setMessages(log)
     setWaiting(true)
     try {
       const res = await askMomo({
         role,
         localTime: now(),
-        sectionTitle: item.title,
-        paper: { steps: paper.steps, tips: paper.tips, asks: paper.asks },
+        openSection: item.id,
+        manual: bodies,
+        asks,
         messages: log,
       })
-      setMessages([...log, { from: 'momo', text: res.reply }])
-      if (res.changeNote) {
-        const note = `${today()}　${res.changeNote}`
-        setPapers((all) => ({
-          ...all,
-          [item.id]: { ...res.paper, history: [...(all[item.id]?.history ?? []), note] },
-        }))
+      setMessages([...log, { from: 'momo', text: res.reply, filed: res.filed || undefined }])
+      setAsks(res.asks)
+      if (res.updates.length > 0) {
+        setManual((all) => {
+          const next = { ...all }
+          for (const u of res.updates) {
+            const history = [...(all[u.section]?.history ?? []), `${today()}　${u.note}`]
+            next[u.section] = { rules: u.rules, bundles: u.bundles, history }
+          }
+          return next
+        })
       }
     } catch {
       setMessages([...log, { from: 'momo', text: SORRY }])
@@ -103,14 +120,21 @@ export function App() {
       </div>
 
       <div className="app">
-        <Shelf shopName={trade.shopName} items={trade.shelf} openId={item.id} onOpen={setOpenId} />
-        <Chat
-          role={role}
-          messages={messages}
-          waiting={waiting}
-          onSend={send}
+        <Shelf
+          shopName={trade.shopName}
+          items={trade.shelf}
+          contents={contents}
+          openId={item.id}
+          onOpen={setOpenId}
         />
-        <PaperView role={role} item={item} paper={papers[item.id]} />
+        <Chat role={role} messages={messages} waiting={waiting} onSend={send} />
+        <PaperView
+          role={role}
+          item={item}
+          paper={manual[item.id]}
+          titleOf={titleOf}
+          onOpen={setOpenId}
+        />
       </div>
     </div>
   )

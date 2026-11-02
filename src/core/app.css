@@ -9,6 +9,8 @@
   --accent-soft: #fbe3e7;
   --tip: #fff4d6;
   --tip-line: #f0cf7a;
+  --rule: #eef6ee;
+  --rule-line: #9cc79c;
 }
 
 * { box-sizing: border-box; }
@@ -124,7 +126,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .page { background: var(--bg); border-radius: 0 16px 16px 0; padding: 16px; overflow: auto; }
 .paper { background: var(--pane); border-radius: 12px; border: 1px solid var(--line); padding: 20px 22px; min-height: 100%; }
 .paper h2 { margin: 0 0 8px; font-size: 21px; }
-.paper h3 { font-size: 15px; margin: 18px 0 6px; color: var(--accent); }
 .blank { color: var(--mute); }
 ol.steps { padding-left: 1.3em; margin: 0; }
 ol.steps li { margin-bottom: 6px; }
@@ -133,7 +134,35 @@ ol.steps li { margin-bottom: 6px; }
   padding: 6px 10px; margin: 4px 0 8px; font-size: 15px;
 }
 .tip b { color: #9a6a00; }
-.changed { font-size: 13px; color: var(--mute); margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.rule {
+  background: var(--rule); border-left: 4px solid var(--rule-line); border-radius: 6px;
+  padding: 7px 12px; margin: 0 0 12px; font-size: 15px;
+}
+.rule b { color: #3f7a3f; }
+
+details.bundle { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; background: var(--pane); }
+details.bundle > summary {
+  list-style: none; display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; cursor: pointer; font-weight: 700;
+}
+details.bundle > summary::-webkit-details-marker { display: none; }
+details.bundle > summary .ic { font-size: 20px; }
+details.bundle > summary .count { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--mute); }
+details.bundle > summary .chev { color: var(--mute); transition: transform .15s; }
+details.bundle[open] > summary .chev { transform: rotate(90deg); }
+details.bundle .body { padding: 0 16px 12px; border-top: 1px dashed var(--line); }
+details.bundle ol.steps { margin-top: 10px; }
+.why { display: block; color: var(--mute); font-size: 13px; }
+.from { background: var(--side); border-radius: 10px; padding: 8px 12px; font-size: 14px; margin: 10px 0 0; }
+.link {
+  display: inline-flex; align-items: center; margin-top: 4px;
+  border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 1px 10px; font-size: 13px;
+}
+
+details.hist { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 8px; font-size: 13px; color: var(--mute); }
+details.hist summary { cursor: pointer; }
+
+.filed { font-size: 13px; color: var(--accent); margin: -8px 0 16px 52px; }
 
 @media (max-width: 1000px) {
   .app { grid-template-columns: 1fr; height: auto; }

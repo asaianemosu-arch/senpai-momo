@@ -4,11 +4,13 @@ import momoUrl from '../../assets/momo/01.png'
 interface Props {
   shopName: string
   items: ShelfItem[]
+  // What each part already holds (bundle names), shown under its title.
+  contents: Record<string, string>
   openId: string
   onOpen: (id: string) => void
 }
 
-export function Shelf({ shopName, items, openId, onOpen }: Props) {
+export function Shelf({ shopName, items, contents, openId, onOpen }: Props) {
   return (
     <section className="side">
       <div className="momo">
@@ -22,12 +24,12 @@ export function Shelf({ shopName, items, openId, onOpen }: Props) {
       </div>
 
       <div className="shelf-title">お店のマニュアル</div>
-      <ShelfList items={items} openId={openId} onOpen={onOpen} />
+      <ShelfList items={items} contents={contents} openId={openId} onOpen={onOpen} />
     </section>
   )
 }
 
-function ShelfList({ items, openId, onOpen }: Omit<Props, 'shopName'>) {
+function ShelfList({ items, contents, openId, onOpen }: Omit<Props, 'shopName'>) {
   return (
     <ul className="shelf">
       {items.map((item) => (
@@ -40,12 +42,12 @@ function ShelfList({ items, openId, onOpen }: Omit<Props, 'shopName'>) {
             <span className="ic">{item.icon}</span>
             <span>
               {item.title}
-              {item.note && <small>{item.note}</small>}
+              {(contents[item.id] || item.note) && <small>{contents[item.id] || item.note}</small>}
             </span>
           </button>
           {item.children && (
             <div className="inner">
-              <ShelfList items={item.children} openId={openId} onOpen={onOpen} />
+              <ShelfList items={item.children} contents={contents} openId={openId} onOpen={onOpen} />
             </div>
           )}
         </li>

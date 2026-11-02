@@ -5,6 +5,7 @@ import { betaZodOutputFormat } from '@anthropic-ai/sdk/helpers/beta/zod'
 import { z } from 'zod'
 import { MOMO_CORE } from '../src/core/momo-prompt'
 import { BAKERY_KNOWLEDGE } from '../src/trades/bakery/prompt'
+import { bakery } from '../src/trades/bakery'
 import type { MomoRequest, MomoResponse } from '../src/core/api'
 
 interface Env {
@@ -16,16 +17,37 @@ const SYSTEM = `${MOMO_CORE}\n\n${BAKERY_KNOWLEDGE}`
 
 const MAX_MESSAGES = 80
 const MAX_TEXT = 4000
+const MAX_MANUAL = 100_000
+
+const SECTIONS = bakery.shelf.map((s) => s.id) as [string, ...string[]]
+const SECTION_LIST = bakery.shelf.map((s) => `${s.id}：${s.icon} ${s.title}`).join('\n')
 
 const Turn = z.object({
   reply: z.string(),
-  paper: z.object({
-    steps: z.array(z.string()),
-    tips: z.array(z.object({ label: z.string(), text: z.string() })),
-    asks: z.array(z.string()),
-  }),
-  paper_changed: z.boolean(),
-  change_note: z.string(),
+  updates: z.array(
+    z.object({
+      section: z.enum(SECTIONS),
+      note: z.string(),
+      rules: z.array(z.string()),
+      bundles: z.array(
+        z.object({
+          icon: z.string(),
+          title: z.string(),
+          note: z.string(),
+          steps: z.array(
+            z.object({
+              text: z.string(),
+              why: z.string(),
+              link: z.string(),
+            }),
+          ),
+          tips: z.array(z.object({ label: z.string(), text: z.string() })),
+        }),
+      ),
+    }),
+  ),
+  filed: z.string(),
+  asks: z.array(z.string()),
 })
 
 function isValid(body: unknown): body is MomoRequest {
@@ -35,15 +57,16 @@ function isValid(body: unknown): body is MomoRequest {
     (b.role === 'chef' || b.role === 'staff') &&
     typeof b.localTime === 'string' &&
     b.localTime.length <= 40 &&
-    typeof b.sectionTitle === 'string' &&
+    SECTIONS.includes(b.openSection) &&
     Array.isArray(b.messages) &&
     b.messages.length > 0 &&
     b.messages.length <= MAX_MESSAGES &&
     b.messages.every((m) => typeof m.text === 'string' && m.text.length <= MAX_TEXT) &&
-    !!b.paper &&
-    Array.isArray(b.paper.steps) &&
-    Array.isArray(b.paper.tips) &&
-    Array.isArray(b.paper.asks)
+    Array.isArray(b.asks) &&
+    !!b.manual &&
+    typeof b.manual === 'object' &&
+    Object.values(b.manual).every((p) => Array.isArray(p?.rules) && Array.isArray(p?.bundles)) &&
+    JSON.stringify(b.manual).length <= MAX_MANUAL
   )
 }
 
@@ -66,8 +89,10 @@ function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
     'モモは画面のはじめに、もうあいさつと名乗りを済ませています。',
     `いまの日時（相手の端末）：${req.localTime}`,
     `いま話している相手：${who}`,
-    `いま開いている紙：「${req.sectionTitle}」`,
-    `いまの紙の中身：${JSON.stringify(req.paper)}`,
+    `棚の場所（id：名前）：\n${SECTION_LIST}`,
+    `いま画面で開いている場所：${req.openSection}`,
+    `いまのマニュアル（場所ごと）：${JSON.stringify(req.manual)}`,
+    `モモの心覚え：${JSON.stringify(req.asks)}`,
   ]
   if (req.role === 'chef' && askedLastTime(req)) {
     notes.push('前の返事で問いかけたので、今回は問いかけず、受け止めて返すだけにします。「？」もお願いも入れない。')
@@ -92,15 +117,29 @@ async function momo(req: MomoRequest, apiKey: string): Promise<MomoResponse> {
   if (response.stop_reason === 'refusal' || !turn) {
     return {
       reply: 'ごめんなさい、うまくお返事できませんでした。言い方を変えて、もう一度話してもらえますか？',
-      paper: req.paper,
-      changeNote: null,
+      updates: [],
+      filed: '',
+      asks: req.asks,
     }
   }
-  const changed = req.role === 'chef' && turn.paper_changed
+  // Only the chef changes the manual; staff only read it.
+  if (req.role !== 'chef') {
+    return { reply: turn.reply, updates: [], filed: '', asks: req.asks }
+  }
   return {
     reply: turn.reply,
-    paper: changed ? turn.paper : req.paper,
-    changeNote: changed ? turn.change_note : null,
+    updates: turn.updates.map((u) => ({
+      ...u,
+      bundles: u.bundles.map((b) => ({
+        ...b,
+        steps: b.steps.map((st) => ({
+          ...st,
+          link: SECTIONS.includes(st.link) && st.link !== u.section ? st.link : null,
+        })),
+      })),
+    })),
+    filed: turn.filed,
+    asks: turn.asks.slice(0, 3),
   }
 }
 
