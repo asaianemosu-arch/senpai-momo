@@ -17,7 +17,7 @@ interface Props {
 
 // Which piece of the paper is open for typing, and what has been typed so far.
 type Draft =
-  | { kind: 'step'; b: number; s: number; text: string; why: string }
+  | { kind: 'step'; b: number; s: number; text: string; why: string; remind: boolean }
   | { kind: 'rule'; r: number; text: string }
   | { kind: 'title'; b: number; text: string }
   | { kind: 'note'; b: number; text: string }
@@ -57,7 +57,7 @@ export function PaperView(props: Props) {
       const rules = text
         ? body.rules.map((r, i) => (i === draft.r ? text : r))
         : body.rules.filter((_, i) => i !== draft.r)
-      change({ ...body, rules }, 'お店の決まり')
+      change({ ...body, rules }, '大切なこと')
     } else if (draft.kind === 'title' && text) {
       setBundle(draft.b, { ...body.bundles[draft.b], title: text }, text)
     } else if (draft.kind === 'note') {
@@ -67,7 +67,9 @@ export function PaperView(props: Props) {
       setSteps(
         draft.b,
         text
-          ? steps.map((s, i) => (i === draft.s ? { ...s, text, why: draft.why.trim() } : s))
+          ? steps.map((s, i) =>
+              i === draft.s ? { ...s, text, why: draft.why.trim(), remind: draft.remind } : s,
+            )
           : steps.filter((_, i) => i !== draft.s),
       )
     } else {
@@ -85,12 +87,22 @@ export function PaperView(props: Props) {
           onChange={(e) => setDraft({ ...draft, text: e.target.value })}
         />
         {draft.kind === 'step' && (
-          <input
-            className="why-in"
-            placeholder="理由（あれば）"
-            value={draft.why}
-            onChange={(e) => setDraft({ ...draft, why: e.target.value })}
-          />
+          <>
+            <input
+              className="why-in"
+              placeholder="理由（あれば）"
+              value={draft.why}
+              onChange={(e) => setDraft({ ...draft, why: e.target.value })}
+            />
+            <label className="remind-in">
+              <input
+                type="checkbox"
+                checked={draft.remind}
+                onChange={(e) => setDraft({ ...draft, remind: e.target.checked })}
+              />
+              忘れずに
+            </label>
+          </>
         )}
         <div className="acts">
           <button type="button" className="save" onClick={save}>
@@ -163,7 +175,7 @@ export function PaperView(props: Props) {
                   className={editing ? 'rule editable' : 'rule'}
                   onClick={editing ? () => setDraft({ kind: 'rule', r: i, text: r }) : undefined}
                 >
-                  <b>お店の決まり</b>　{r}
+                  <b>大切なこと</b>　{r}
                 </div>
               ),
             )}
@@ -217,10 +229,19 @@ export function PaperView(props: Props) {
                               className={editing ? 'grow editable' : 'grow'}
                               onClick={
                                 editing
-                                  ? () => setDraft({ kind: 'step', b: bi, s: si, text: s.text, why: s.why })
+                                  ? () =>
+                                      setDraft({
+                                        kind: 'step',
+                                        b: bi,
+                                        s: si,
+                                        text: s.text,
+                                        why: s.why,
+                                        remind: !!s.remind,
+                                      })
                                   : undefined
                               }
                             >
+                              {s.remind && <span className="remind">忘れずに</span>}
                               {s.text}
                               {s.why && <span className="why">{s.why}</span>}
                               {s.link && !editing && (
@@ -256,7 +277,7 @@ export function PaperView(props: Props) {
                       type="button"
                       className="add"
                       onClick={() =>
-                        setDraft({ kind: 'step', b: bi, s: b.steps.length, text: '', why: '' })
+                        setDraft({ kind: 'step', b: bi, s: b.steps.length, text: '', why: '', remind: false })
                       }
                     >
                       ＋ 手順を足す
@@ -266,14 +287,15 @@ export function PaperView(props: Props) {
                     <AddStep
                       draft={draft as Extract<Draft, { kind: 'step' }>}
                       setDraft={setDraft}
-                      onSave={(text, why) =>
-                        setSteps(bi, [...b.steps, { text, why, link: null }])
+                      onSave={(text, why, remind) =>
+                        setSteps(bi, [...b.steps, { text, why, link: null, remind }])
                       }
                     />
                   )}
 
                   {b.tips.map((t, j) => (
                     <div key={j} className="tip">
+                      <span className="tip-tag">ポイント</span>
                       <b>{t.label}</b>　{t.text}
                     </div>
                   ))}
@@ -304,7 +326,7 @@ function AddStep({
 }: {
   draft: Extract<Draft, { kind: 'step' }>
   setDraft: (d: Draft | null) => void
-  onSave: (text: string, why: string) => void
+  onSave: (text: string, why: string, remind: boolean) => void
 }) {
   return (
     <div className="editbox add-box">
@@ -321,11 +343,19 @@ function AddStep({
         value={draft.why}
         onChange={(e) => setDraft({ ...draft, why: e.target.value })}
       />
+      <label className="remind-in">
+        <input
+          type="checkbox"
+          checked={draft.remind}
+          onChange={(e) => setDraft({ ...draft, remind: e.target.checked })}
+        />
+        忘れずに
+      </label>
       <div className="acts">
         <button
           type="button"
           className="save"
-          onClick={() => draft.text.trim() && onSave(draft.text.trim(), draft.why.trim())}
+          onClick={() => draft.text.trim() && onSave(draft.text.trim(), draft.why.trim(), draft.remind)}
         >
           足す
         </button>

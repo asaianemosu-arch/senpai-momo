@@ -21,6 +21,8 @@ export interface Step {
   why: string
   // Another shelf item this step leads to, or null.
   link: string | null
+  // The chef stressed it ("don't forget", "people often get this wrong").
+  remind?: boolean
 }
 
 // A small group of steps inside one part of the day (e.g. "getting ready").

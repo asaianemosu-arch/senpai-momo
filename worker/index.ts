@@ -39,6 +39,7 @@ const Turn = z.object({
               text: z.string(),
               why: z.string(),
               link: z.string(),
+              remind: z.boolean(),
             }),
           ),
           tips: z.array(z.object({ label: z.string(), text: z.string() })),

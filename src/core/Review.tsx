@@ -87,10 +87,10 @@ export function Review({ pages, onFix, onPublish, onClose }: Props) {
               </div>
               {page.rules ? (
                 <>
-                  <h3>お店の決まり</h3>
+                  <h3>大切なこと</h3>
                   {page.rules.map((r, i) => (
                     <div key={i} className="rule">
-                      <b>お店の決まり</b>　{r}
+                      <b>大切なこと</b>　{r}
                     </div>
                   ))}
                 </>
@@ -105,6 +105,7 @@ export function Review({ pages, onFix, onPublish, onClose }: Props) {
                     <ol className="steps">
                       {page.bundle.steps.map((s, i) => (
                         <li key={i}>
+                          {s.remind && <span className="remind">忘れずに</span>}
                           {s.text}
                           {s.why && <span className="why">{s.why}</span>}
                         </li>
@@ -112,6 +113,7 @@ export function Review({ pages, onFix, onPublish, onClose }: Props) {
                     </ol>
                     {page.bundle.tips.map((t, i) => (
                       <div key={i} className="tip">
+                        <span className="tip-tag">ポイント</span>
                         <b>{t.label}</b>　{t.text}
                       </div>
                     ))}

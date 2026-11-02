@@ -288,3 +288,14 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 .sheet-foot button { flex: 1; margin: 0; padding: 10px; font-size: 15px; }
 @keyframes from-left { from { transform: translateX(-100%); } }
 @keyframes from-bottom { from { transform: translateY(100%); } }
+
+/* "忘れずに" on a step the chef stressed, "ポイント" on a tip */
+.remind {
+  display: inline-block; font-size: 12px; font-weight: 700; color: #fff; background: var(--accent);
+  border-radius: 99px; padding: 0 8px; margin-right: 6px; vertical-align: 1px;
+}
+.tip-tag {
+  display: inline-block; font-size: 11px; color: #9a6a00; border: 1px solid var(--tip-line);
+  border-radius: 99px; padding: 0 7px; margin-right: 6px; vertical-align: 1px;
+}
+.remind-in { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; margin-top: 6px; }
