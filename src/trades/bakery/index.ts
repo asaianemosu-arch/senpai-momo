@@ -7,7 +7,7 @@ export const bakery: Trade = {
   shelf: [
     { id: 'open', icon: '☀️', title: 'オープン前' },
     { id: 'day', icon: '🕐', title: '1日の流れ', note: '時間ごとの仕事' },
-    { id: 'service', icon: '🛎️', title: '営業中' },
+    { id: 'service', icon: '🛎️', title: '販売中', note: 'お客さまに売る仕事' },
     { id: 'close', icon: '🌙', title: 'クローズ' },
     { id: 'hygiene', icon: '🌡️', title: '衛生の記録', note: '冷蔵庫・冷凍庫の温度など' },
   ],
