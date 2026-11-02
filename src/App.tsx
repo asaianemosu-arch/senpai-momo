@@ -39,7 +39,7 @@ function now() {
 
 const ROLES: { role: Role; icon: string; label: string }[] = [
   { role: 'chef', icon: '🧑‍🍳', label: 'シェフ（教える）' },
-  { role: 'staff', icon: '🙋', label: 'スタッフ（使う）' },
+  { role: 'staff', icon: '🙋', label: 'スタッフ（聞く）' },
 ]
 
 export function App() {

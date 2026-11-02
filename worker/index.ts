@@ -18,6 +18,8 @@ const SYSTEM = `${MOMO_CORE}\n\n${BAKERY_KNOWLEDGE}`
 const MAX_MESSAGES = 80
 const MAX_TEXT = 4000
 const MAX_MANUAL = 100_000
+const MAX_ASKS = 8
+const FROM_STAFF = '【スタッフから】'
 
 const SECTIONS = bakery.shelf.map((s) => s.id) as [string, ...string[]]
 const SECTION_LIST = bakery.shelf.map((s) => `${s.id}：${s.icon} ${s.title}`).join('\n')
@@ -85,7 +87,7 @@ function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
     if (messages.length === 0 && m.from === 'momo') continue
     messages.push({ role: m.from === 'momo' ? 'assistant' : 'user', content: m.text })
   }
-  const who = req.role === 'chef' ? 'シェフ' : '新人さん'
+  const who = req.role === 'chef' ? 'シェフ' : 'スタッフ'
   const notes = [
     'モモは画面のはじめに、もうあいさつと名乗りを済ませています。',
     `いまの日時（相手の端末）：${req.localTime}`,
@@ -123,9 +125,11 @@ async function momo(req: MomoRequest, apiKey: string): Promise<MomoResponse> {
       asks: req.asks,
     }
   }
-  // Only the chef changes the manual; staff only read it.
+  // Only the chef changes the manual; staff only read it. What staff asked
+  // and Momo could not answer is kept, quietly, for her next talk with the chef.
   if (req.role !== 'chef') {
-    return { reply: turn.reply, updates: [], filed: '', asks: req.asks }
+    const fromStaff = turn.asks.filter((a) => a.startsWith(FROM_STAFF) && !req.asks.includes(a))
+    return { reply: turn.reply, updates: [], filed: '', asks: [...req.asks, ...fromStaff].slice(-MAX_ASKS) }
   }
   return {
     reply: turn.reply,
@@ -140,7 +144,7 @@ async function momo(req: MomoRequest, apiKey: string): Promise<MomoResponse> {
       })),
     })),
     filed: turn.filed,
-    asks: turn.asks.slice(0, 3),
+    asks: turn.asks.slice(0, MAX_ASKS),
   }
 }
 
