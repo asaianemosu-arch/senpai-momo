@@ -45,6 +45,13 @@ function isValid(body: unknown): body is MomoRequest {
   )
 }
 
+// The greeting on screen is not counted: it is not a reply to the chef.
+function askedLastTime(req: MomoRequest): boolean {
+  const replies = req.messages.slice(1).filter((m) => m.from === 'momo')
+  const last = replies[replies.length - 1]
+  return !!last && /[？?]/.test(last.text)
+}
+
 function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
   const messages: Anthropic.Beta.BetaMessageParam[] = []
   for (const m of req.messages) {
@@ -53,10 +60,16 @@ function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
     messages.push({ role: m.from === 'momo' ? 'assistant' : 'user', content: m.text })
   }
   const who = req.role === 'chef' ? 'シェフ' : '新人さん'
-  messages.push({
-    role: 'system',
-    content: `モモは画面のはじめに、もうあいさつと名乗りを済ませています。\nいま話している相手：${who}\nいま開いている紙：「${req.sectionTitle}」\nいまの紙の中身：${JSON.stringify(req.paper)}`,
-  })
+  const notes = [
+    'モモは画面のはじめに、もうあいさつと名乗りを済ませています。',
+    `いま話している相手：${who}`,
+    `いま開いている紙：「${req.sectionTitle}」`,
+    `いまの紙の中身：${JSON.stringify(req.paper)}`,
+  ]
+  if (req.role === 'chef' && askedLastTime(req)) {
+    notes.push('前の返事で問いかけたので、今回は問いかけず、受け止めて返すだけにします。「？」もお願いも入れない。')
+  }
+  messages.push({ role: 'system', content: notes.join('\n') })
   return messages
 }
 
