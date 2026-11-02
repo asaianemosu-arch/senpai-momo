@@ -1,4 +1,5 @@
-import type { Bundle, PaperBody, ShelfItem } from './types'
+import { useState } from 'react'
+import { WEEKDAYS, type Bundle, type PaperBody, type ShelfItem, type Weekday } from './types'
 
 interface Props {
   item: ShelfItem
@@ -16,23 +17,34 @@ interface Entry {
 
 const PASTELS = ['peach', 'sky', 'lemon', 'mint', 'lilac']
 
-// Where a bundle with only words ("帰る前") goes: spread by the part of the
-// day it is in, the first part at the start of the day, the last at its end.
+// Where a bundle with only words goes: in the first part of the day
+// ("来たらすぐ") before every clock time, otherwise ("帰る前") after them,
+// in the order of the parts.
 function keyOf(section: ShelfItem, bundle: Bundle, order: string[]): number {
   if (bundle.minutes !== undefined && bundle.minutes >= 0) return bundle.minutes
   const at = Math.max(0, order.indexOf(section.id))
-  return order.length < 2 ? 0 : Math.round((at / (order.length - 1)) * 24 * 60) - 1
+  return at === 0 ? -1 : 24 * 60 + at
 }
 
 // The day's timetable: not a place to file work, a map of the day built
 // from the times the chef mentioned in the other parts.
+// Today in the shop's week (月 first).
+function today(): Weekday {
+  return WEEKDAYS[(new Date().getDay() + 6) % 7]
+}
+
 export function Timetable({ item, shelf, manual, onPick, onClose }: Props) {
+  const [day, setDay] = useState<Weekday>(today)
   const parts = shelf.filter((s) => !s.timetable)
   const order = parts.map((s) => s.id)
   const timed: Entry[] = []
   const untimed: Entry[] = []
+  const routineDays = new Set<Weekday>()
   for (const section of parts) {
     for (const bundle of manual[section.id]?.bundles ?? []) {
+      bundle.days?.forEach((d) => routineDays.add(d))
+      // A weekday routine shows only on its days; everything else, every day.
+      if (bundle.days?.length && !bundle.days.includes(day)) continue
       if (bundle.time) timed.push({ section, bundle, key: keyOf(section, bundle, order) })
       else untimed.push({ section, bundle, key: 0 })
     }
@@ -59,8 +71,12 @@ export function Timetable({ item, shelf, manual, onPick, onClose }: Props) {
         <span className="where">
           {e.section.icon} {e.section.title}
         </span>
-        <b>{e.bundle.title}</b>
+        <b>
+          {e.bundle.title}
+          {!!e.bundle.days?.length && <span className="week">{e.bundle.days.join('・')}</span>}
+        </b>
         {e.bundle.summary && <small>{e.bundle.summary}</small>}
+        {!!e.bundle.facts?.length && <Facts facts={e.bundle.facts} />}
       </span>
     </button>
   )
@@ -78,6 +94,22 @@ export function Timetable({ item, shelf, manual, onPick, onClose }: Props) {
               ✕
             </button>
           )}
+        </div>
+
+        <div className="days" role="tablist">
+          {WEEKDAYS.map((d) => (
+            <button
+              key={d}
+              type="button"
+              role="tab"
+              aria-selected={d === day}
+              className={['day', d === day && 'on', d === today() && 'today'].filter(Boolean).join(' ')}
+              onClick={() => setDay(d)}
+            >
+              {d}
+              {routineDays.has(d) && <span className="has" />}
+            </button>
+          ))}
         </div>
 
         {slots.length === 0 ? (
@@ -104,5 +136,17 @@ export function Timetable({ item, shelf, manual, onPick, onClose }: Props) {
         )}
       </div>
     </section>
+  )
+}
+
+export function Facts({ facts }: { facts: { label: string; text: string }[] }) {
+  return (
+    <span className="facts">
+      {facts.map((f, i) => (
+        <span key={i}>
+          {f.label}：{f.text}
+        </span>
+      ))}
+    </span>
   )
 }

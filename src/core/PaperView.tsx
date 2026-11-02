@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import type { Bundle, Paper, PaperBody, Role, ShelfItem, Step } from './types'
+import { WEEKDAYS, type Bundle, type Paper, type PaperBody, type Role, type ShelfItem, type Step, type Weekday } from './types'
+import { Facts } from './Timetable'
 
 interface Props {
   role: Role
@@ -32,6 +33,11 @@ function minutesOf(time: string): number {
   const h = Number(m[1])
   const min = m[2] === '半' ? 30 : Number(m[2] ?? 0)
   return h < 24 && min < 60 ? h * 60 + min : -1
+}
+
+function toggleDay(days: Weekday[] | undefined, d: Weekday): Weekday[] {
+  const next = days?.includes(d) ? days.filter((x) => x !== d) : [...(days ?? []), d]
+  return WEEKDAYS.filter((x) => next.includes(x))
 }
 
 function move<T>(list: T[], from: number, to: number): T[] {
@@ -236,10 +242,28 @@ export function PaperView(props: Props) {
                   ) : (
                     b.time && <span className="time-chip">🕐 {b.time}</span>
                   )}
+                  {!editing && !!b.days?.length && <span className="week">{b.days.join('・')}</span>}
                   <span className="count">{b.steps.length}つ</span>
                   <span className="chev">▸</span>
                 </summary>
                 <div className="body">
+                  {editing && (
+                    <div className="day-pick" aria-label="曜日（選ばなければ毎日）">
+                      <span>曜日</span>
+                      {WEEKDAYS.map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          className={b.days?.includes(d) ? 'on' : ''}
+                          onClick={() => setBundle(bi, { ...b, days: toggleDay(b.days, d) }, b.title)}
+                        >
+                          {d}
+                        </button>
+                      ))}
+                      <small>{b.days?.length ? '' : '毎日'}</small>
+                    </div>
+                  )}
+                  {!!b.facts?.length && <Facts facts={b.facts} />}
                   {is({ kind: 'note', b: bi }) ? (
                     editBox(2)
                   ) : b.note ? (

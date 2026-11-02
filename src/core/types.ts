@@ -12,6 +12,9 @@ export interface ShelfItem {
   children?: ShelfItem[]
 }
 
+export const WEEKDAYS = ['月', '火', '水', '木', '金', '土', '日'] as const
+export type Weekday = (typeof WEEKDAYS)[number]
+
 export interface Tip {
   label: string
   text: string
@@ -39,6 +42,10 @@ export interface Bundle {
   // minutes from midnight to sort the timetable (-1 when only words are known).
   time?: string
   minutes?: number
+  // Weekdays when it happens ("月", "木"); none means every day.
+  days?: Weekday[]
+  // Short facts newcomers look for, e.g. for an order: なに / どこへ / どうやって.
+  facts?: Tip[]
   note: string
   steps: Step[]
   tips: Tip[]

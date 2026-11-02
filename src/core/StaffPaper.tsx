@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { Focus, PaperBody, ShelfItem } from './types'
 import { StepIcon } from './ShowCard'
+import { Facts } from './Timetable'
 
 interface Props {
   item: ShelfItem
@@ -52,13 +53,18 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
                   <button type="button" className="fold-top" onClick={() => toggle(b.title)}>
                     <span className="illust peach">{b.icon}</span>
                     <span className="grow">
-                      <b>{b.title}</b>
+                      <b>
+                        {b.title}
+                        {b.time && <span className="time-chip">🕐 {b.time}</span>}
+                        {!!b.days?.length && <span className="week">{b.days.join('・')}</span>}
+                      </b>
                       {!open && <small>{b.summary || b.steps.slice(0, 2).map((s) => s.text).join('、')}</small>}
                     </span>
                     <span className="chev">{open ? '▾' : '▸'}</span>
                   </button>
                   {open && (
                     <div className="fold-body">
+                      {!!b.facts?.length && <Facts facts={b.facts} />}
                       {b.note && <p className="from">{b.note}</p>}
                       {b.steps.map((s, i) => (
                         <div key={i} className={lit.includes(i + 1) ? 'ostep lit' : 'ostep'}>

@@ -367,3 +367,21 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 
 .time-chip { font-size: 12px; font-weight: 400; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 1px 10px; white-space: nowrap; flex: none; }
 .time-chip.add-time { color: var(--mute); background: var(--bg); border: 1px dashed var(--line); }
+
+/* weekdays on the timetable, and short facts on a bundle */
+.days { display: flex; gap: 6px; margin: 16px 0 16px; flex-wrap: wrap; }
+.day {
+  width: 42px; height: 42px; border-radius: 14px; border: 1px solid var(--line); background: var(--pane);
+  display: grid; place-items: center; font-weight: 700; position: relative;
+}
+.day.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.day .has { position: absolute; bottom: 5px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.day.on .has { background: #fff; }
+.day.today::after { content: "きょう"; position: absolute; top: -15px; font-size: 10px; font-weight: 400; color: var(--accent); }
+.week { display: inline-block; font-size: 11px; font-weight: 400; color: #fff; background: #d98aa0; border-radius: 99px; padding: 0 8px; margin-left: 6px; vertical-align: 1px; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.facts span { font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 0 6px; color: var(--ink); }
+.day-pick { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 10px 0 4px; font-size: 13px; color: var(--mute); }
+.day-pick button { width: 30px; height: 30px; border-radius: 10px; border: 1px solid var(--line); background: var(--pane); font-size: 13px; }
+.day-pick button.on { background: #d98aa0; border-color: #d98aa0; color: #fff; }
+.fold-top .time-chip { margin-left: 6px; }

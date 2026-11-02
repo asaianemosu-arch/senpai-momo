@@ -7,7 +7,7 @@ import { MOMO_CORE } from '../src/core/momo-prompt'
 import { BAKERY_KNOWLEDGE } from '../src/trades/bakery/prompt'
 import { bakery } from '../src/trades/bakery'
 import type { MomoRequest, TalkResponse, WriteResponse } from '../src/core/api'
-import type { Focus } from '../src/core/types'
+import { WEEKDAYS, type Focus } from '../src/core/types'
 
 interface Env {
   ANTHROPIC_API_KEY?: string
@@ -53,6 +53,8 @@ const Write = z.object({
           summary: z.string(),
           time: z.string(),
           minutes: z.number().int(),
+          days: z.array(z.enum(WEEKDAYS)),
+          facts: z.array(z.object({ label: z.string(), text: z.string() })),
           note: z.string(),
           steps: z.array(
             z.object({
