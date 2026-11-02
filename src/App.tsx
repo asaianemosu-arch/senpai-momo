@@ -66,6 +66,9 @@ export function App() {
   const [writingCount, setWritingCount] = useState(0)
   // The steps Momo last pointed to for staff; that bundle opens on their paper.
   const [focus, setFocus] = useState<Focus | null>(null)
+  // Momo is drawn in light when the app opens and when the chef starts talking.
+  const [light, setLight] = useState(0)
+  const talked = useRef(false)
   const writing = useRef(Promise.resolve())
   const narrow = useNarrow()
   const [shelfOpen, setShelfOpen] = useState(false)
@@ -125,6 +128,10 @@ export function App() {
   async function send(text: string) {
     const log: Message[] = [...messages, { from: role, text }]
     const ask = { role, localTime: now(), openSection: item.id }
+    if (role === 'chef' && !talked.current) {
+      talked.current = true
+      setLight((n) => n + 1)
+    }
     setMessages(log)
     setWaiting(true)
     let after: Message[]
@@ -216,6 +223,7 @@ export function App() {
       items={trade.shelf}
       contents={contents}
       openId={item.id}
+      light={light}
       onOpen={(id) => {
         setOpenId(id)
         if (narrow) {
