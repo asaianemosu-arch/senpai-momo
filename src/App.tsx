@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import type { Focus, Manual, Message, PaperBody, Role, ShelfItem } from './core/types'
+import { useEffect, useRef, useState } from 'react'
+import type { Focus, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
 import { Shelf } from './core/Shelf'
@@ -7,6 +7,7 @@ import { Chat } from './core/Chat'
 import { PaperView } from './core/PaperView'
 import { StaffPaper } from './core/StaffPaper'
 import { ShowCard } from './core/ShowCard'
+import { Timetable } from './core/Timetable'
 import { Review, changesSince } from './core/Review'
 import { useNarrow } from './core/useNarrow'
 import momoUrl from '../assets/momo/01.png'
@@ -24,6 +25,10 @@ function titleOf(id: string) {
   const item = findItem(trade.shelf, id)
   return item ? `${item.icon} ${item.title}` : id
 }
+
+const TIMETABLE = trade.shelf.find((s) => s.timetable)?.id ?? ''
+// Where work filed in the old "1日の流れ" part goes: the part for the working day.
+const DAYTIME = 'service'
 
 // The chef keeps talking in one long conversation. Momo only needs the
 // recent part: what came before already lives in the paper and her notes.
@@ -71,6 +76,21 @@ export function App() {
   const [staffLog, setStaffLog] = usePersistent<Message[]>('log:staff', [
     { from: 'momo', text: trade.greetings.staff },
   ])
+
+  // The timetable used to be a part of its own; work filed there moves to
+  // the part where it happens during the day.
+  useEffect(() => {
+    function move<T extends PaperBody>(all: Record<string, T>, empty: T): Record<string, T> {
+      const moved = all[TIMETABLE]?.bundles ?? []
+      if (moved.length === 0) return all
+      const into = all[DAYTIME] ?? empty
+      const next: Record<string, T> = { ...all, [DAYTIME]: { ...into, bundles: [...into.bundles, ...moved] } }
+      delete next[TIMETABLE]
+      return next
+    }
+    setManual((all) => move<Paper>(all, { rules: [], bundles: [], history: [] }))
+    setPublished((all) => move<PaperBody>(all, { rules: [], bundles: [] }))
+  }, [])
 
   // Paper writing runs after the reply; it reads the newest manual from here.
   const latest = useRef({ manual, asks })
@@ -230,7 +250,18 @@ export function App() {
     />
   )
 
-  const paperView = role === 'staff' ? (
+  const paperView = item.timetable ? (
+    <Timetable
+      item={item}
+      shelf={trade.shelf}
+      manual={shown}
+      onPick={(section, bundle) => {
+        setOpenId(section)
+        if (role === 'staff') setFocus({ section, bundle, steps: [] })
+      }}
+      onClose={narrow ? () => setPaperOpen(false) : undefined}
+    />
+  ) : role === 'staff' ? (
     <StaffPaper
       item={item}
       paper={published[item.id]}

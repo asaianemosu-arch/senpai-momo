@@ -46,7 +46,7 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
             ))}
             {paper.bundles.map((b) => {
               const lit = here?.bundle === b.title ? here.steps : []
-              const open = lit.length > 0 || opened.includes(b.title)
+              const open = here?.bundle === b.title || opened.includes(b.title)
               return (
                 <div key={b.title} className={open ? 'fold open' : 'fold'}>
                   <button type="button" className="fold-top" onClick={() => toggle(b.title)}>

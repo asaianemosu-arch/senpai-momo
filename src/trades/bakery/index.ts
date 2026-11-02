@@ -5,9 +5,11 @@ import type { Trade } from '../../core/types'
 export const bakery: Trade = {
   shopName: 'もふもふベーカリー',
   shelf: [
+    // Not a place to file work: the day's timetable, built from the times
+    // the chef mentions in the other parts.
+    { id: 'day', icon: '🕐', title: '1日の流れ', note: '時間割', timetable: true },
     { id: 'open', icon: '☀️', title: 'オープン前' },
-    { id: 'day', icon: '🕐', title: '1日の流れ', note: '時間ごとの仕事' },
-    { id: 'service', icon: '🛎️', title: '販売中', note: 'お客さまに売る仕事' },
+    { id: 'service', icon: '🛎️', title: '営業中', note: '製造も販売も' },
     { id: 'close', icon: '🌙', title: 'クローズ' },
     { id: 'hygiene', icon: '🌡️', title: '衛生の記録', note: '冷蔵庫・冷凍庫の温度など' },
   ],

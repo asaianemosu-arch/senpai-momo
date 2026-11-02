@@ -341,3 +341,26 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 .ostep .illust { width: 38px; height: 38px; font-size: 20px; border-radius: 12px; }
 .ostep.lit { background: var(--accent-soft); }
 .ostep.lit .n { background: var(--accent); color: #fff; }
+
+/* ---------- 1日の流れ: the timetable ---------- */
+.tt { margin-top: 4px; }
+.slot { display: grid; grid-template-columns: 76px 28px 1fr; align-items: stretch; }
+.time { text-align: right; padding-top: 12px; font-weight: 700; font-size: 17px; color: var(--accent); line-height: 1.3; }
+.rail { position: relative; }
+.rail::before { content: ""; position: absolute; left: 13px; top: 0; bottom: 0; width: 2px; background: var(--accent-soft); }
+.slot:first-child .rail::before { top: 18px; }
+.slot:last-child .rail::before { bottom: calc(100% - 18px); }
+.dot { position: absolute; left: 6px; top: 16px; width: 16px; height: 16px; border-radius: 50%; background: var(--pane); border: 3px solid var(--accent); }
+.jobs { padding: 6px 0 14px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.job {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: var(--pane); border: 1px solid var(--line); border-radius: 16px; padding: 9px 12px;
+}
+.job:hover { border-color: var(--accent); }
+.job .illust { width: 44px; height: 44px; font-size: 23px; border-radius: 14px; }
+.job b { display: block; font-size: 15px; }
+.job small { display: block; color: var(--mute); font-size: 13px; line-height: 1.4; }
+.where { display: inline-block; font-size: 11px; color: var(--mute); background: var(--bg); border: 1px solid var(--line); border-radius: 99px; padding: 0 8px; margin-bottom: 2px; white-space: nowrap; }
+.later .jobs { padding-top: 10px; }
+.narrow .slot { grid-template-columns: 58px 24px 1fr; }
+.narrow .time { font-size: 15px; }

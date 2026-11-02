@@ -23,13 +23,18 @@ const MAX_ASKS = 8
 const FROM_STAFF = '【スタッフから】'
 
 const SECTIONS = bakery.shelf.map((s) => s.id) as [string, ...string[]]
-const SECTION_LIST = bakery.shelf.map((s) => `${s.id}：${s.icon} ${s.title}`).join('\n')
+// Parts where work is filed; the timetable is built from them.
+const FILED = bakery.shelf.filter((s) => !s.timetable).map((s) => s.id) as [string, ...string[]]
+const SECTION_LIST = bakery.shelf
+  .filter((s) => !s.timetable)
+  .map((s) => `${s.id}：${s.icon} ${s.title}`)
+  .join('\n')
 
 const Talk = z.object({
   reply: z.string(),
   asks: z.array(z.string()),
   show: z.object({
-    section: z.enum([...SECTIONS, 'none']),
+    section: z.enum([...FILED, 'none']),
     bundle: z.string(),
     steps: z.array(z.number().int()),
   }),
@@ -38,7 +43,7 @@ const Talk = z.object({
 const Write = z.object({
   updates: z.array(
     z.object({
-      section: z.enum(SECTIONS),
+      section: z.enum(FILED),
       note: z.string(),
       rules: z.array(z.string()),
       bundles: z.array(
@@ -46,6 +51,8 @@ const Write = z.object({
           icon: z.string(),
           title: z.string(),
           summary: z.string(),
+          time: z.string(),
+          minutes: z.number().int(),
           note: z.string(),
           steps: z.array(
             z.object({

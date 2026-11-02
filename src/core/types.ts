@@ -7,6 +7,8 @@ export interface ShelfItem {
   icon: string
   title: string
   note?: string
+  // A view built from the other parts (the day's timetable), not a place to file work.
+  timetable?: boolean
   children?: ShelfItem[]
 }
 
@@ -33,6 +35,10 @@ export interface Bundle {
   title: string
   // One line saying what the bundle is about, shown when it is folded.
   summary?: string
+  // When it happens, in the chef's words ("4:30", "10時までに", "帰る前"), and
+  // minutes from midnight to sort the timetable (-1 when only words are known).
+  time?: string
+  minutes?: number
   note: string
   steps: Step[]
   tips: Tip[]
