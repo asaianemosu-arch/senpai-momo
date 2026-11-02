@@ -36,8 +36,8 @@ function now() {
 }
 
 const ROLES: { role: Role; label: string }[] = [
-  { role: 'chef', label: '👨‍🍳 シェフ（教える）' },
-  { role: 'staff', label: '🧑‍🍳 スタッフ（使う）' },
+  { role: 'chef', label: '🧑‍🍳 シェフ（教える）' },
+  { role: 'staff', label: '🙋 スタッフ（使う）' },
 ]
 
 export function App() {

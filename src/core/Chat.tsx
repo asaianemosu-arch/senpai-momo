@@ -15,8 +15,8 @@ const HEADER: Record<Role, string> = {
 }
 
 const FACE: Record<Role, string> = {
-  chef: '👨‍🍳',
-  staff: '🧑‍🍳',
+  chef: '🧑‍🍳',
+  staff: '🙋',
 }
 
 export function Chat({ role, messages, waiting, onSend }: Props) {
