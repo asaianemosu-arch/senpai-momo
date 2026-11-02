@@ -5,6 +5,7 @@ import { askMomo } from './core/api'
 import { Shelf } from './core/Shelf'
 import { Chat } from './core/Chat'
 import { PaperView } from './core/PaperView'
+import { Review, changesSince } from './core/Review'
 import { bakery as trade } from './trades/bakery'
 
 function findItem(items: ShelfItem[], id: string): ShelfItem | undefined {
@@ -44,6 +45,10 @@ export function App() {
   const [openId, setOpenId] = usePersistent('open', trade.shelf[0].id)
   const [manual, setManual] = usePersistent<Manual>('manual', {})
   const [asks, setAsks] = usePersistent<string[]>('asks', [])
+  // The version last handed out to the staff; they only ever see this.
+  const [published, setPublished] = usePersistent<Record<string, PaperBody>>('published', {})
+  const [editing, setEditing] = useState(false)
+  const [reviewing, setReviewing] = useState(false)
   const [waiting, setWaiting] = useState(false)
   const [chefLog, setChefLog] = usePersistent<Message[]>('log:chef', [
     { from: 'momo', text: trade.greetings.chef },
@@ -56,17 +61,30 @@ export function App() {
   const setMessages = role === 'chef' ? setChefLog : setStaffLog
   const item = findItem(trade.shelf, openId) ?? trade.shelf[0]
 
-  const contents: Record<string, string> = {}
+  const bodies: Record<string, PaperBody> = {}
   for (const [id, paper] of Object.entries(manual)) {
-    contents[id] = paper.bundles.map((b) => b.title).join('・')
+    bodies[id] = { rules: paper.rules, bundles: paper.bundles }
+  }
+  // The chef works on the draft; the staff read what was handed out.
+  const shown = role === 'chef' ? bodies : published
+
+  const contents: Record<string, string> = {}
+  for (const [id, body] of Object.entries(shown)) {
+    contents[id] = body.bundles.map((b) => b.title).join('・')
+  }
+
+  function edit(id: string, body: PaperBody, note: string) {
+    setManual((all) => {
+      const history = all[id]?.history ?? []
+      const line = `${today()}　${note}`
+      // Several small fixes in a row to the same bundle are one entry.
+      const next = history[history.length - 1] === line ? history : [...history, line]
+      return { ...all, [id]: { ...body, history: next } }
+    })
   }
 
   async function send(text: string) {
     const log: Message[] = [...messages, { from: role, text }]
-    const bodies: Record<string, PaperBody> = {}
-    for (const [id, paper] of Object.entries(manual)) {
-      bodies[id] = { rules: paper.rules, bundles: paper.bundles }
-    }
     setMessages(log)
     setWaiting(true)
     try {
@@ -74,7 +92,7 @@ export function App() {
         role,
         localTime: now(),
         openSection: item.id,
-        manual: bodies,
+        manual: shown,
         asks,
         messages: log,
       })
@@ -111,7 +129,10 @@ export function App() {
               role="tab"
               aria-selected={role === r.role}
               className={role === r.role ? 'on' : ''}
-              onClick={() => setRole(r.role)}
+              onClick={() => {
+                setEditing(false)
+                setRole(r.role)
+              }}
             >
               {r.label}
             </button>
@@ -131,11 +152,34 @@ export function App() {
         <PaperView
           role={role}
           item={item}
-          paper={manual[item.id]}
+          paper={role === 'chef' ? manual[item.id] : published[item.id] && { ...published[item.id], history: [] }}
+          editing={role === 'chef' && editing}
+          onToggleEdit={() => setEditing(!editing)}
+          onPublish={() => {
+            setEditing(false)
+            setReviewing(true)
+          }}
+          onChange={(body, note) => edit(item.id, body, note)}
           titleOf={titleOf}
           onOpen={setOpenId}
         />
       </div>
+
+      {reviewing && (
+        <Review
+          pages={changesSince(trade.shelf, bodies, published)}
+          onFix={(id) => {
+            setReviewing(false)
+            setOpenId(id)
+            setEditing(true)
+          }}
+          onPublish={() => {
+            setPublished(bodies)
+            setReviewing(false)
+          }}
+          onClose={() => setReviewing(false)}
+        />
+      )}
     </div>
   )
 }

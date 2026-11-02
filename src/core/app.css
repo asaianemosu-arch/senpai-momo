@@ -171,3 +171,53 @@ details.hist summary { cursor: pointer; }
   .page { border-radius: 0 0 16px 16px; }
   .chat { height: 70vh; }
 }
+
+/* paper head: title, then the chef's two buttons */
+.paper-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.paper-head h2 { flex: 1 0 100%; margin: 0; }
+.edit-toggle { margin-left: auto; border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 4px 14px; font-size: 14px; }
+.edit-toggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.send-btn { border: none; background: var(--accent); color: #fff; border-radius: 99px; padding: 4px 14px; font-size: 14px; }
+.editing-bar { background: var(--accent-soft); border-radius: 10px; padding: 6px 12px; font-size: 13px; margin-bottom: 12px; }
+
+/* editing the paper */
+.grow { flex: 1; min-width: 0; }
+.editable { cursor: text; border-radius: 6px; }
+.editable:hover { background: var(--accent-soft); }
+ol.steps.edit { list-style: none; padding-left: 0; counter-reset: s; }
+ol.steps.edit > li { counter-increment: s; display: flex; align-items: flex-start; gap: 8px; padding: 4px; }
+ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: var(--mute); padding-top: 2px; }
+.tools { display: flex; gap: 4px; flex: none; }
+.tools button { border: 1px solid var(--line); background: var(--pane); border-radius: 8px; width: 34px; height: 34px; font-size: 15px; }
+.editbox { flex: 1; }
+.editbox textarea { width: 100%; font: inherit; font-size: 16px; border: 2px solid var(--accent); border-radius: 8px; padding: 6px 10px; resize: vertical; color: var(--ink); background: var(--pane); }
+.editbox .why-in { width: 100%; font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; margin-top: 4px; color: var(--ink); }
+.editbox .acts { display: flex; gap: 8px; margin-top: 6px; }
+.editbox .acts button { border-radius: 99px; padding: 4px 16px; font-size: 14px; border: 1px solid var(--line); background: var(--pane); }
+.editbox .acts .save { background: var(--accent); border-color: var(--accent); color: #fff; }
+.add { display: block; width: 100%; text-align: left; border: 1px dashed var(--line); background: transparent; border-radius: 8px; padding: 6px 12px; color: var(--mute); font-size: 14px; margin-top: 6px; }
+.add-box { margin-top: 8px; }
+
+/* check before handing out */
+.overlay { position: fixed; inset: 0; background: rgba(59, 42, 38, .35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.review { background: var(--pane); border-radius: 16px; width: min(720px, 100%); height: min(720px, 88vh); display: flex; flex-direction: column; padding: 22px 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, .2); }
+.review h2 { margin: 0; font-size: 21px; }
+.review .lead { color: var(--mute); font-size: 14px; margin: 4px 0 14px; }
+.rv-top { display: flex; align-items: baseline; gap: 10px; }
+.rv-top .pos { margin-left: auto; color: var(--mute); font-size: 14px; }
+.pg { flex: 1; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.pg h3 { margin: 6px 0 10px; font-size: 20px; }
+.pg .crumb { display: flex; align-items: center; gap: 8px; color: var(--mute); font-size: 14px; }
+.pg ol.steps li { margin-bottom: 10px; font-size: 17px; }
+.fixbtn { margin-left: auto; border: 1px solid var(--line); background: var(--pane); border-radius: 99px; padding: 2px 12px; font-size: 13px; }
+.tag { font-size: 11px; border-radius: 99px; padding: 0 8px; }
+.tag.new { background: #e8f1ff; color: #3a66a8; }
+.tag.fixed { background: var(--tip); color: #9a6a00; }
+.tag.removed { background: #f1e3e3; color: #8a3a3a; }
+.pager { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.pager button { border-radius: 99px; padding: 10px 22px; font-size: 16px; border: 1px solid var(--line); background: var(--pane); }
+.pager .go { margin-left: auto; background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+.pager .dots { display: flex; gap: 6px; margin: 0 auto; }
+.pager .dots i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); cursor: pointer; }
+.pager .dots i.on { background: var(--accent); }
+.later { align-self: center; margin-top: 8px; border: none; background: none; color: var(--mute); font-size: 13px; }
