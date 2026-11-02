@@ -23,6 +23,10 @@ function titleOf(id: string) {
   return item ? `${item.icon} ${item.title}` : id
 }
 
+// The chef keeps talking in one long conversation. Momo only needs the
+// recent part: what came before already lives in the paper and her notes.
+const RECENT = 40
+
 const SORRY = 'ごめんなさい、いまお返事ができませんでした。少しして、もう一度送ってもらえますか？'
 
 function today() {
@@ -99,7 +103,7 @@ export function App() {
         openSection: item.id,
         manual: shown,
         asks,
-        messages: log,
+        messages: log.slice(-RECENT),
       })
       setMessages([
         ...log,

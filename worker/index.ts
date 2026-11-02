@@ -73,9 +73,11 @@ function isValid(body: unknown): body is MomoRequest {
   )
 }
 
-// The greeting on screen is not counted: it is not a reply to the chef.
+// Momo's last reply, if she has replied to anyone yet (the greeting on screen
+// comes before any user turn and does not count).
 function askedLastTime(req: MomoRequest): boolean {
-  const replies = req.messages.slice(1).filter((m) => m.from === 'momo')
+  const firstUser = req.messages.findIndex((m) => m.from !== 'momo')
+  const replies = req.messages.slice(firstUser + 1).filter((m) => m.from === 'momo')
   const last = replies[replies.length - 1]
   return !!last && /[？?]/.test(last.text)
 }
@@ -96,6 +98,7 @@ function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
     `いま画面で開いている場所：${req.openSection}`,
     `いまのマニュアル（場所ごと）：${JSON.stringify(req.manual)}`,
     `モモの心覚え：${JSON.stringify(req.asks)}`,
+    '会話は最近のぶんだけです。それより前に聞いたことは、マニュアルに書いてあります。',
   ]
   if (req.role === 'chef' && askedLastTime(req)) {
     notes.push('前の返事で問いかけたので、今回は問いかけず、受け止めて返すだけにします。「？」もお願いも入れない。')
