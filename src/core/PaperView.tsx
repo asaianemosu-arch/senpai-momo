@@ -20,7 +20,19 @@ type Draft =
   | { kind: 'step'; b: number; s: number; text: string; why: string; remind: boolean }
   | { kind: 'rule'; r: number; text: string }
   | { kind: 'title'; b: number; text: string }
+  | { kind: 'time'; b: number; text: string }
   | { kind: 'note'; b: number; text: string }
+
+// Minutes from midnight for sorting the timetable: "4:30", "4時半", "10時までに".
+// Words alone ("帰る前") give -1 and keep their place by the part of the day.
+function minutesOf(time: string): number {
+  const t = time.normalize('NFKC')
+  const m = t.match(/(\d{1,2})\s*[:時]\s*(半|\d{1,2})?/)
+  if (!m) return -1
+  const h = Number(m[1])
+  const min = m[2] === '半' ? 30 : Number(m[2] ?? 0)
+  return h < 24 && min < 60 ? h * 60 + min : -1
+}
 
 function move<T>(list: T[], from: number, to: number): T[] {
   if (to < 0 || to >= list.length) return list
@@ -58,6 +70,9 @@ export function PaperView(props: Props) {
         ? body.rules.map((r, i) => (i === draft.r ? text : r))
         : body.rules.filter((_, i) => i !== draft.r)
       change({ ...body, rules }, '大切なこと')
+    } else if (draft.kind === 'time') {
+      const bundle = body.bundles[draft.b]
+      setBundle(draft.b, { ...bundle, time: text || undefined, minutes: text ? minutesOf(text) : undefined }, bundle.title)
     } else if (draft.kind === 'title' && text) {
       setBundle(draft.b, { ...body.bundles[draft.b], title: text }, text)
     } else if (draft.kind === 'note') {
@@ -83,6 +98,7 @@ export function PaperView(props: Props) {
         <textarea
           rows={rows}
           autoFocus
+          placeholder={draft.kind === 'time' ? '例：4:30、10時までに、帰る前（消すと時間割から外れます）' : undefined}
           value={draft.text}
           onChange={(e) => setDraft({ ...draft, text: e.target.value })}
         />
@@ -202,6 +218,23 @@ export function PaperView(props: Props) {
                     >
                       {b.title}
                     </span>
+                  )}
+                  {is({ kind: 'time', b: bi }) ? (
+                    <span className="grow" onClick={(e) => e.preventDefault()}>
+                      {editBox(1)}
+                    </span>
+                  ) : editing ? (
+                    <span
+                      className={b.time ? 'time-chip editable' : 'time-chip add-time editable'}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setDraft({ kind: 'time', b: bi, text: b.time ?? '' })
+                      }}
+                    >
+                      {b.time ? `🕐 ${b.time}` : '＋ 時刻'}
+                    </span>
+                  ) : (
+                    b.time && <span className="time-chip">🕐 {b.time}</span>
                   )}
                   <span className="count">{b.steps.length}つ</span>
                   <span className="chev">▸</span>

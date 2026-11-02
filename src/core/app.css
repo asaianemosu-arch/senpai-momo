@@ -364,3 +364,6 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 .later .jobs { padding-top: 10px; }
 .narrow .slot { grid-template-columns: 58px 24px 1fr; }
 .narrow .time { font-size: 15px; }
+
+.time-chip { font-size: 12px; font-weight: 400; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 1px 10px; white-space: nowrap; flex: none; }
+.time-chip.add-time { color: var(--mute); background: var(--bg); border: 1px dashed var(--line); }
