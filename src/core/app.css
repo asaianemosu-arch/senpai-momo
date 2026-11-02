@@ -9,8 +9,6 @@
   --accent-soft: #fbe3e7;
   --tip: #fff4d6;
   --tip-line: #f0cf7a;
-  --ask: #eaf3ff;
-  --ask-line: #a9c6ee;
 }
 
 * { box-sizing: border-box; }
@@ -135,10 +133,6 @@ ol.steps li { margin-bottom: 6px; }
   padding: 6px 10px; margin: 4px 0 8px; font-size: 15px;
 }
 .tip b { color: #9a6a00; }
-.ask {
-  background: var(--ask); border-left: 4px solid var(--ask-line); border-radius: 6px;
-  padding: 8px 10px 8px 2em; margin: 0; font-size: 15px;
-}
 .changed { font-size: 13px; color: var(--mute); margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 8px; }
 
 @media (max-width: 1000px) {

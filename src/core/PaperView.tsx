@@ -44,16 +44,6 @@ export function PaperView({ role, item, paper }: Props) {
                 ))}
               </>
             )}
-            {role === 'chef' && paper.asks.length > 0 && (
-              <>
-                <h3>まだ聞けていないこと</h3>
-                <ul className="ask">
-                  {paper.asks.map((a, i) => (
-                    <li key={i}>{a}</li>
-                  ))}
-                </ul>
-              </>
-            )}
             {paper.history.length > 0 && (
               <div className="changed">
                 {paper.history.map((h, i) => (

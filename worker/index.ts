@@ -55,7 +55,7 @@ function toApiMessages(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
   const who = req.role === 'chef' ? 'シェフ' : '新人さん'
   messages.push({
     role: 'system',
-    content: `いま話している相手：${who}\nいま開いている紙：「${req.sectionTitle}」\nいまの紙の中身：${JSON.stringify(req.paper)}`,
+    content: `モモは画面のはじめに、もうあいさつと名乗りを済ませています。\nいま話している相手：${who}\nいま開いている紙：「${req.sectionTitle}」\nいまの紙の中身：${JSON.stringify(req.paper)}`,
   })
   return messages
 }
