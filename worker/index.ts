@@ -64,6 +64,7 @@ const Write = z.object({
           days: z.array(z.enum(WEEKDAYS)),
           facts: z.array(z.object({ label: z.string(), text: z.string() })),
           note: z.string(),
+          photo: z.object({ id: z.string(), caption: z.string() }),
           steps: z.array(
             z.object({
               text: z.string(),
@@ -71,6 +72,7 @@ const Write = z.object({
               link: z.string(),
               remind: z.boolean(),
               icon: z.string(),
+              photo: z.string(),
             }),
           ),
           tips: z.array(z.object({ label: z.string(), text: z.string() })),
@@ -145,7 +147,8 @@ const HANDED: Record<Attachment['kind'], string> = {
 
 // What the chef handed over, as words: the memo itself, or what Momo read.
 function handed(a: Attachment): string {
-  const head = `【シェフが渡したもの：${HANDED[a.kind]}${a.name ? `「${a.name}」` : ''}】`
+  const id = a.photo ? `（写真の番号：${a.photo}）` : ''
+  const head = `【シェフが渡したもの：${HANDED[a.kind]}${a.name ? `「${a.name}」` : ''}${id}】`
   return a.text ? `${head}\n${a.text}\n【ここまで】` : head
 }
 
@@ -238,14 +241,25 @@ async function write(client: Anthropic, req: MomoRequest): Promise<WriteResponse
   })
   const turn = response.parsed_output
   if (response.stop_reason === 'refusal' || !turn) return { updates: [], filed: '', asks: req.asks }
+  // Only photos the chef really handed over, or already on the paper.
+  const photos = new Set<string>()
+  for (const m of req.messages) if (m.attach?.photo) photos.add(m.attach.photo)
+  for (const p of Object.values(req.manual)) {
+    for (const b of p.bundles) {
+      if (b.photo) photos.add(b.photo.id)
+      for (const st of b.steps) if (st.photo) photos.add(st.photo)
+    }
+  }
   return {
     updates: turn.updates.map((u) => ({
       ...u,
       bundles: u.bundles.map((b) => ({
         ...b,
+        photo: photos.has(b.photo.id) ? b.photo : undefined,
         steps: b.steps.map((st) => ({
           ...st,
           link: SECTIONS.includes(st.link) && st.link !== u.section ? st.link : null,
+          photo: photos.has(st.photo) ? st.photo : undefined,
         })),
       })),
     })),

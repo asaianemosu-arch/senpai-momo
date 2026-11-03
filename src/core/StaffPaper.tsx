@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Focus, PaperBody, ShelfItem } from './types'
-import { StepIcon } from './ShowCard'
+import { BundlePhoto, StepIcon } from './ShowCard'
 import { Facts } from './Timetable'
 
 interface Props {
@@ -64,6 +64,7 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
                   </button>
                   {open && (
                     <div className="fold-body">
+                      <BundlePhoto photo={b.photo} />
                       {!!b.facts?.length && <Facts facts={b.facts} />}
                       {b.note && <p className="from">{b.note}</p>}
                       {b.steps.map((s, i) => (

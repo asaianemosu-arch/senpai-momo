@@ -30,6 +30,8 @@ export interface Step {
   remind?: boolean
   // One emoji picturing the action, shown big and cute to staff.
   icon?: string
+  // The chef's photo of this step, shown in place of the icon.
+  photo?: string
 }
 
 // A small group of steps inside one part of the day (e.g. "getting ready").
@@ -47,8 +49,16 @@ export interface Bundle {
   // Short facts newcomers look for, e.g. for an order: なに / どこへ / どうやって.
   facts?: Tip[]
   note: string
+  // The chef's photo of the whole bundle (how it should look), on top.
+  photo?: Photo
   steps: Step[]
   tips: Tip[]
+}
+
+// A photo kept on this device (see photos.ts), with a line saying what it shows.
+export interface Photo {
+  id: string
+  caption: string
 }
 
 // What Momo writes for one shelf item.
@@ -96,6 +106,8 @@ export interface Attachment {
   name?: string
   // A small picture of a photo, shown in the conversation.
   thumb?: string
+  // The photo itself, kept on this device so it can go on the paper.
+  photo?: string
   // The words in it: taken out on the screen, or as Momo read them.
   text: string
 }

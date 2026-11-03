@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BundlePhoto, StepPhoto } from './ShowCard'
 import type { Bundle, PaperBody, ShelfItem } from './types'
 
 // One page of the check before handing the manual to the staff.
@@ -101,10 +102,12 @@ export function Review({ pages, onFix, onPublish, onClose }: Props) {
                       {page.bundle.icon} {page.bundle.title}
                     </h3>
                     {page.kind === 'removed' && <p className="lead">この束は、スタッフの紙から消えます。</p>}
+                    <BundlePhoto photo={page.bundle.photo} />
                     {page.bundle.note && <p className="from">{page.bundle.note}</p>}
                     <ol className="steps">
                       {page.bundle.steps.map((s, i) => (
                         <li key={i}>
+                          <StepPhoto id={s.photo} />
                           {s.remind && <span className="remind">忘れずに</span>}
                           {s.text}
                           {s.why && <span className="why">{s.why}</span>}

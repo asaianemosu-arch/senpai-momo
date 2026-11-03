@@ -6,6 +6,7 @@ import { useVoice, type VoiceError } from './voice'
 import { HandedView, MomoRead, PasteSheet, PhotoSheet, trouble } from './Handover'
 import { PHOTO_ACCEPT, readFile, type Handed } from './files'
 import { useNarrow } from './useNarrow'
+import { keepPhoto } from './photos'
 
 interface Props {
   role: Role
@@ -70,10 +71,19 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
     said.current = ''
   }
 
-  function hand(h: Handed) {
+  async function hand(h: Handed) {
     setSheet(null)
     setHint('')
-    if (!waiting) onSend('', h)
+    if (waiting) return
+    // A photo is kept so Momo can paste it on the paper.
+    if (h.attach.kind === 'photo' && h.media?.type === 'image') {
+      try {
+        h = { ...h, attach: { ...h.attach, photo: await keepPhoto(h.media.data) } }
+      } catch {
+        // Without the database the photo is still read; it just is not pasted.
+      }
+    }
+    onSend('', h)
   }
 
   async function photo(f: File) {

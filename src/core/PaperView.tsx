@@ -1,6 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { WEEKDAYS, type Bundle, type Paper, type PaperBody, type Role, type ShelfItem, type Step, type Weekday } from './types'
 import { Facts } from './Timetable'
+import { BundlePhoto, StepPhoto } from './ShowCard'
+import { trouble } from './Handover'
+import { readFile } from './files'
+import { keepPhoto } from './photos'
 
 interface Props {
   role: Role
@@ -51,6 +55,10 @@ function move<T>(list: T[], from: number, to: number): T[] {
 export function PaperView(props: Props) {
   const { role, item, paper, editing, titleOf, onOpen } = props
   const [draft, setDraft] = useState<Draft | null>(null)
+  // Where a photo chosen with "📷 写真を足す" goes: a bundle, or one of its steps.
+  const [photoFor, setPhotoFor] = useState<{ b: number; s?: number } | null>(null)
+  const [photoNote, setPhotoNote] = useState('')
+  const picker = useRef<HTMLInputElement>(null)
   const canEdit = role === 'chef'
   const empty = !paper || (paper.rules.length === 0 && paper.bundles.length === 0)
   const body: PaperBody = { rules: paper?.rules ?? [], bundles: paper?.bundles ?? [] }
@@ -66,6 +74,28 @@ export function PaperView(props: Props) {
 
   function setSteps(b: number, steps: Step[]) {
     setBundle(b, { ...body.bundles[b], steps }, body.bundles[b].title)
+  }
+
+  function addPhoto(b: number, s?: number) {
+    setPhotoNote('')
+    setPhotoFor({ b, s })
+    picker.current?.click()
+  }
+
+  async function photoChosen(file: File) {
+    if (!photoFor) return
+    try {
+      const h = await readFile(file)
+      if (h.media?.type !== 'image') throw new Error()
+      const id = await keepPhoto(h.media.data)
+      const bundle = body.bundles[photoFor.b]
+      const s = photoFor.s
+      if (s === undefined) setBundle(photoFor.b, { ...bundle, photo: { id, caption: '' } }, `${bundle.title}の写真`)
+      else setSteps(photoFor.b, bundle.steps.map((x, i) => (i === s ? { ...x, photo: id } : x)))
+    } catch (e) {
+      setPhotoNote(trouble(e) || '写真を貼れませんでした。')
+    }
+    setPhotoFor(null)
   }
 
   function save() {
@@ -179,6 +209,18 @@ export function PaperView(props: Props) {
             直したいところを押すと、文字を直せます。⬆︎⬇︎で順番、🗑で消す。終わったら右上の釦をもう一度。
           </div>
         )}
+        {photoNote && <p className="hand-note">{photoNote}</p>}
+        <input
+          ref={picker}
+          type="file"
+          accept="image/*,.heic,.heif"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            e.target.value = ''
+            if (f) photoChosen(f)
+          }}
+        />
 
         {empty ? (
           <p className="blank">
@@ -263,6 +305,23 @@ export function PaperView(props: Props) {
                       <small>{b.days?.length ? '' : '毎日'}</small>
                     </div>
                   )}
+                  <BundlePhoto photo={b.photo}>
+                    {editing && (
+                      <button
+                        type="button"
+                        className="photo-x"
+                        aria-label="写真を外す"
+                        onClick={() => setBundle(bi, { ...b, photo: undefined }, `${b.title}の写真`)}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </BundlePhoto>
+                  {editing && !b.photo && (
+                    <button type="button" className="add photo-add" onClick={() => addPhoto(bi)}>
+                      📷 束の写真を足す
+                    </button>
+                  )}
                   {!!b.facts?.length && <Facts facts={b.facts} />}
                   {is({ kind: 'note', b: bi }) ? (
                     editBox(2)
@@ -282,6 +341,20 @@ export function PaperView(props: Props) {
                           editBox(2)
                         ) : (
                           <>
+                            <StepPhoto id={s.photo}>
+                              {editing && (
+                                <button
+                                  type="button"
+                                  className="photo-x"
+                                  aria-label="写真を外す"
+                                  onClick={() =>
+                                    setSteps(bi, b.steps.map((x, i) => (i === si ? { ...x, photo: undefined } : x)))
+                                  }
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </StepPhoto>
                             <span
                               className={editing ? 'grow editable' : 'grow'}
                               onClick={
@@ -309,6 +382,11 @@ export function PaperView(props: Props) {
                             </span>
                             {editing && (
                               <span className="tools">
+                                {!s.photo && (
+                                  <button type="button" title="写真を足す" onClick={() => addPhoto(bi, si)}>
+                                    📷
+                                  </button>
+                                )}
                                 <button type="button" title="上へ" onClick={() => setSteps(bi, move(b.steps, si, si - 1))}>
                                   ⬆︎
                                 </button>
