@@ -1,3 +1,7 @@
 # Copy this file to .dev.vars and put your own key after the "=".
 # .dev.vars is never committed. In production the key lives in Cloudflare's secrets.
 ANTHROPIC_API_KEY=
+
+# Momo's voice (ElevenLabs): your key, and the ID of the voice to read her bubbles.
+ELEVENLABS_API_KEY=
+MOMO_VOICE_ID=

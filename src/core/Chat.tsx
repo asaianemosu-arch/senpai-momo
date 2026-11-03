@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Message, Role } from './types'
 import momoUrl from '../../assets/momo/01.png'
+import { useListen, type ListenTrouble } from './useListen'
+import { useVoice, type VoiceError } from './voice'
 
 interface Props {
   role: Role
@@ -20,6 +22,14 @@ const HEADER: Record<Role, string> = {
   staff: 'モモに聞く',
 }
 
+const TROUBLE: Record<ListenTrouble | VoiceError['kind'], string> = {
+  unsupported: 'このブラウザでは声を聞き取れません。Chrome か Safari で開くと話せます。',
+  denied: 'マイクが使えません。ブラウザに聞かれたら「許可」を押してください。',
+  failed: 'うまく聞き取れませんでした。もう一度押して話してください。',
+  not_ready: 'モモの声は、まだ準備中です。',
+  busy: 'モモの声が混みあっています。少しして押してください。',
+}
+
 const FACE: Record<Role, string> = {
   chef: '🧑‍🍳',
   staff: '🙋',
@@ -27,17 +37,36 @@ const FACE: Record<Role, string> = {
 
 export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShowPaper }: Props) {
   const [draft, setDraft] = useState('')
+  const [hint, setHint] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
+  const said = useRef('')
+  const ear = useListen({
+    onWords: (text) => {
+      said.current = text
+      setDraft(text)
+    },
+    onEnd: (finished) => {
+      if (finished) send(said.current)
+    },
+    onTrouble: (t) => setHint(TROUBLE[t]),
+  })
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight })
   }, [messages, waiting, writing])
 
-  function send() {
-    const text = draft.trim()
+  function send(text = draft) {
+    text = text.trim()
     if (!text || waiting) return
     onSend(text)
     setDraft('')
+    said.current = ''
+  }
+
+  function mic() {
+    setHint('')
+    if (ear.listening) ear.stopAndSend()
+    else ear.start(draft)
   }
 
   return (
@@ -52,6 +81,7 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
                 {m.from === 'momo' ? <img src={momoUrl} alt="" /> : FACE[m.from]}
               </div>
               <div className="bubble">{m.text}</div>
+              {m.from === 'momo' && <Speak text={m.text} onError={(e) => setHint(TROUBLE[e.kind])} />}
             </div>
             {cardFor?.(m)}
             {m.filed && <p className="filed">→ {m.filed}</p>}
@@ -84,9 +114,15 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
             <span className="long">手書きを読む</span>
             <span className="short">手書き</span>
           </button>
-          <button type="button" className="mic" aria-label="話す">
+          <button
+            type="button"
+            className={ear.listening ? 'mic on' : 'mic'}
+            aria-label={ear.listening ? '話し終えて送る' : '話す'}
+            aria-pressed={ear.listening}
+            onClick={mic}
+          >
             <span className="mic-icon">🎤</span>
-            <span className="mic-label">話す</span>
+            <span className="mic-label">{ear.listening ? '送る' : '話す'}</span>
           </button>
           <button type="button" className="ways">
             <span className="ways-ic">📋</span>
@@ -94,6 +130,7 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
             <span className="short">貼る</span>
           </button>
         </div>
+        {hint && <p className="hint">{hint}</p>}
         <form
           className="box"
           onSubmit={(e) => {
@@ -104,11 +141,26 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="文字でも書けます"
+            placeholder={ear.listening ? '聞いています…' : '文字でも書けます'}
           />
           <button type="submit" className="send" aria-label="送る">↑</button>
         </form>
       </div>
     </section>
+  )
+}
+
+// 🔊 under each of Momo's bubbles: press to hear her, press again to stop.
+function Speak({ text, onError }: { text: string; onError: (e: VoiceError) => void }) {
+  const { state, toggle } = useVoice(text, onError)
+  return (
+    <button
+      type="button"
+      className={`speak ${state}`}
+      aria-label={state === 'idle' ? 'モモの声で聞く' : '止める'}
+      onClick={toggle}
+    >
+      {state === 'playing' ? '⏹' : '🔊'}
+    </button>
   )
 }

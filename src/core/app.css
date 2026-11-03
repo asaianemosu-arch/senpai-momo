@@ -115,6 +115,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .mic-icon { font-size: 36px; line-height: 1; }
 .mic-label { font-size: 15px; font-weight: 700; margin-top: 4px; }
+.mic.on { animation: listen 1.4s ease-in-out infinite; }
+@keyframes listen {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 68, 90, .45), 0 6px 16px rgba(200, 68, 90, .35); }
+  50% { box-shadow: 0 0 0 14px rgba(200, 68, 90, 0), 0 6px 16px rgba(200, 68, 90, .35); }
+}
+.hint { margin: 0 0 10px; text-align: center; color: var(--mute); font-size: 14px; }
+.speak {
+  align-self: flex-end; flex: none; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--bg); font-size: 16px; line-height: 1;
+  display: grid; place-items: center; cursor: pointer;
+}
+.speak.loading { animation: blink 1.2s infinite; }
+.speak.playing { background: var(--accent-soft); border-color: var(--accent); }
 .ways {
   border: 1px solid var(--line); background: var(--bg);
   border-radius: 99px; padding: 6px 14px; font-size: 14px;

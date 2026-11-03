@@ -11,6 +11,9 @@ import { WEEKDAYS, type Focus } from '../src/core/types'
 
 interface Env {
   ANTHROPIC_API_KEY?: string
+  // Momo's voice (ElevenLabs). Both live only in the secrets, never in the repo.
+  ELEVENLABS_API_KEY?: string
+  MOMO_VOICE_ID?: string
 }
 
 const MODEL = 'claude-opus-5-5'
@@ -211,9 +214,51 @@ async function momo(req: MomoRequest, apiKey: string) {
   return req.step === 'talk' ? talk(client, req) : write(client, req)
 }
 
+const MAX_SPOKEN = 1000
+const KANA_COUNT = ['', 'ひとつ', 'ふたつ', 'みっつ', 'よっつ', 'いつつ', 'むっつ', 'ななつ', 'やっつ', 'ここのつ', 'とお']
+
+// What Momo's voice reads: the bubble without kaomoji and emoji, and
+// counts like 5つ in kana, which the voice reads without stumbling.
+function spoken(text: string): string {
+  return text
+    .replace(/[(（]([^()（）]*)[)）]/g, (all, inner: string) =>
+      /[\p{Script=Hiragana}\p{Script=Han}]/u.test(inner) ? all : '',
+    )
+    .replace(/\p{Extended_Pictographic}\uFE0F?/gu, '')
+    .replace(/(?<![0-9０-９])(10|[1-9]|[１-９])つ/g, (_, n: string) => KANA_COUNT[Number(n.normalize('NFKC'))])
+    .replace(/[ \t]+/g, ' ')
+    .trim()
+}
+
+async function voice(request: Request, env: Env): Promise<Response> {
+  if (!env.ELEVENLABS_API_KEY || !env.MOMO_VOICE_ID) {
+    return Response.json({ error: 'not_configured' }, { status: 503 })
+  }
+  const body = (await request.json().catch(() => null)) as { text?: unknown } | null
+  const text = typeof body?.text === 'string' ? spoken(body.text) : ''
+  if (!text || text.length > MAX_SPOKEN) {
+    return Response.json({ error: 'bad_request' }, { status: 400 })
+  }
+  const res = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(env.MOMO_VOICE_ID)}?output_format=mp3_44100_128`,
+    {
+      method: 'POST',
+      headers: { 'xi-api-key': env.ELEVENLABS_API_KEY, 'content-type': 'application/json' },
+      // Reading directions in English: Japanese ones made the voice stumble.
+      body: JSON.stringify({ text: `[warmly] ${text}`, model_id: 'eleven_v3', language_code: 'ja' }),
+    },
+  )
+  if (!res.ok) {
+    console.error('ElevenLabs error', res.status, await res.text().catch(() => ''))
+    return Response.json({ error: res.status === 429 ? 'busy' : 'upstream' }, { status: res.status === 429 ? 429 : 502 })
+  }
+  return new Response(res.body, { headers: { 'content-type': 'audio/mpeg' } })
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+    if (url.pathname === '/api/voice' && request.method === 'POST') return voice(request, env)
     if (url.pathname !== '/api/momo' || request.method !== 'POST') {
       return new Response('Not found', { status: 404 })
     }
