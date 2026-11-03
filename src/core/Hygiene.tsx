@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import type { HygieneAnswer, HygieneDay, HygieneForm, HygieneItem, HygieneTime } from './types'
+import type { HygieneAnswer, HygieneDay, HygieneForm, HygieneItem, HygienePlan, HygieneTime } from './types'
 import { useListen } from './useListen'
 import momoUrl from '../../assets/momo/01.png'
 
@@ -324,17 +324,37 @@ interface SheetProps {
 // The record as the guide's form: ◯／× and 特記事項, row by row.
 export function HygieneSheet({ form, date, day, onCheck, onClose }: SheetProps) {
   const [y, m, d] = date.split('-').map(Number)
+  const [showPlan, setShowPlan] = useState(false)
   let lastTitle = ''
+  const top = (
+    <div className="hy-sheet-top">
+      <div className="hy-switch" role="tablist">
+        <button type="button" role="tab" aria-selected={!showPlan} className={showPlan ? '' : 'on'} onClick={() => setShowPlan(false)}>
+          記録表
+        </button>
+        <button type="button" role="tab" aria-selected={showPlan} className={showPlan ? 'on' : ''} onClick={() => setShowPlan(true)}>
+          衛生管理計画
+        </button>
+      </div>
+      {onClose && (
+        <button type="button" className="close" aria-label="閉じる" onClick={onClose}>
+          ✕
+        </button>
+      )}
+    </div>
+  )
+  if (showPlan) {
+    return (
+      <div className="hy-sheet">
+        {top}
+        <PlanSheet plan={form.plan} />
+      </div>
+    )
+  }
   return (
     <div className="hy-sheet">
-      <div className="hy-sheet-top">
-        <h3>{form.title}</h3>
-        {onClose && (
-          <button type="button" className="close" aria-label="閉じる" onClick={onClose}>
-            ✕
-          </button>
-        )}
-      </div>
+      {top}
+      <h3 className="hy-title">{form.title}</h3>
       <div className="hy-date">
         {y}年 {m}月 {d}日
       </div>
@@ -422,5 +442,62 @@ function Row({ item, day }: { item: HygieneItem; day: HygieneDay }) {
       <td className={`mark ${mark === '◯' ? 'ok' : mark === '×' ? 'ng' : 'na'}`}>{mark}</td>
       <td className="memo">{memos.join('　')}</td>
     </tr>
+  )
+}
+
+// The 衛生管理計画: the guide's worked example, with this shop's changes starred.
+function PlanSheet({ plan }: { plan: HygienePlan }) {
+  return (
+    <>
+      <h3 className="hy-title">{plan.title}</h3>
+      <table className="hy-plan">
+        <colgroup>
+          <col style={{ width: '22%' }} />
+          <col style={{ width: '9%' }} />
+          <col style={{ width: '17%' }} />
+          <col style={{ width: '28%' }} />
+          <col style={{ width: '24%' }} />
+        </colgroup>
+        <tbody>
+          <tr>
+            <th>チェックポイント</th>
+            <th>頻度</th>
+            <th>いつ</th>
+            <th>実施事項</th>
+            <th>問題があった場合</th>
+          </tr>
+          {plan.sections.map((sec) => [
+            <tr key={sec.title}>
+              <td colSpan={5} className="part">
+                {sec.title}
+              </td>
+            </tr>,
+            ...sec.rows.flatMap((r) =>
+              r.pairs.map(([act, fix], i) => (
+                <tr key={`${r.point}-${i}`}>
+                  {i === 0 && (
+                    <>
+                      <td rowSpan={r.pairs.length}>
+                        {r.point}
+                        {r.ours?.note && <span className="ours">★ {r.ours.note}</span>}
+                      </td>
+                      <td rowSpan={r.pairs.length} className={r.ours?.freq ? 'ours-cell' : ''}>
+                        {r.ours?.freq ? `★ ${r.ours.freq}` : r.freq}
+                      </td>
+                      <td rowSpan={r.pairs.length} className={r.ours?.when ? 'ours-cell' : ''}>
+                        {r.ours?.when ? `★ ${r.ours.when}` : r.when}
+                      </td>
+                    </>
+                  )}
+                  <td>{act}</td>
+                  <td>{fix}</td>
+                </tr>
+              )),
+            ),
+          ])}
+        </tbody>
+      </table>
+      <p className="hy-src">{plan.source}</p>
+    </>
   )
 }

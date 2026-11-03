@@ -135,6 +135,25 @@ export interface HygieneForm {
   title: string
   groups: HygieneGroup[]
   source: string
+  plan: HygienePlan
+}
+
+// The 衛生管理計画, as the guide's worked example: shops use it as it is,
+// changing only what differs in their shop (marked "ours").
+export interface HygienePlan {
+  title: string
+  source: string
+  sections: { title: string; rows: HygienePlanRow[] }[]
+}
+
+export interface HygienePlanRow {
+  point: string
+  freq: string
+  when: string
+  // 実施事項 and 問題があった場合, side by side.
+  pairs: [string, string][]
+  // What this shop changed from the example.
+  ours?: { freq?: string; when?: string; note?: string }
 }
 
 export interface HygieneAnswer {

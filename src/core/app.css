@@ -577,9 +577,15 @@ details.bundle > summary .grow { min-width: 8em; }
 .page-stack { display: flex; flex-direction: column; gap: 12px; overflow: auto; background: var(--bg); border-radius: 0 16px 16px 0; padding: 16px; }
 .page-stack > .page { padding: 0; overflow: visible; background: none; }
 .hy-sheet { background: var(--pane); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; font-size: 13px; }
-.hy-sheet-top { display: flex; align-items: center; justify-content: center; position: relative; }
-.hy-sheet-top h3 { margin: 0; font-size: 17px; }
-.hy-sheet-top .close { position: absolute; right: 0; }
+.hy-sheet-top { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.hy-switch { display: flex; gap: 4px; background: var(--side); border-radius: 99px; padding: 3px; flex: 1; }
+.hy-switch button { flex: 1; border: none; background: none; border-radius: 99px; padding: 5px 8px; font: inherit; font-size: 13px; color: var(--mute); }
+.hy-switch button.on { background: var(--pane); color: var(--ink); font-weight: 700; box-shadow: 0 1px 3px rgba(59, 42, 38, .12); }
+.hy-title { margin: 0; font-size: 17px; text-align: center; }
+.hy-plan td { white-space: pre-line; font-size: 12px; }
+.hy-plan th { font-size: 12px; }
+.hy-plan .ours { display: block; color: var(--accent); font-size: 11px; margin-top: 2px; }
+.hy-plan td.ours-cell { color: var(--accent); background: #fff8f9; }
 .hy-date { text-align: right; color: var(--mute); margin: 2px 0 8px; }
 .hy-sheet table { width: 100%; border-collapse: collapse; }
 .hy-sheet th, .hy-sheet td { border: 1px solid #d9c8bf; padding: 4px 6px; vertical-align: top; text-align: left; }
@@ -598,3 +604,5 @@ details.bundle > summary .grow { min-width: 8em; }
 .hy-check { margin-left: 6px; border: 1px solid var(--accent); color: var(--accent); background: var(--pane); border-radius: 99px; font-size: 12px; padding: 1px 8px; }
 .hy-src { margin: 8px 0 0; font-size: 11px; color: var(--mute); }
 .narrow .page-stack { border-radius: 0; }
+.hy-plan { table-layout: fixed; }
+.hy-plan td, .hy-plan th { overflow-wrap: anywhere; }
