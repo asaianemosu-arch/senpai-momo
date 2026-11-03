@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { WEEKDAYS, type Bundle, type PaperBody, type ShelfItem, type Weekday } from './types'
 
 interface Props {
@@ -159,10 +159,13 @@ function splitNote(text: string): [string, string] {
 }
 
 // A recipe's 配合: one material a line, the amount right after it.
-export function Recipe({ facts }: { facts: { label: string; text: string }[] }) {
+export function Recipe({ facts, pen }: { facts: { label: string; text: string }[]; pen?: ReactNode }) {
   return (
     <div className="recipe-list">
-      <div className="recipe-head">配合</div>
+      <div className="recipe-head">
+        <span>配合</span>
+        {pen}
+      </div>
       {facts.map((f, i) => {
         const [amount, note] = splitNote(f.text)
         return (

@@ -62,7 +62,6 @@ export function App() {
   const [asks, setAsks] = usePersistent<string[]>('asks', [])
   // The version last handed out to the staff; they only ever see this.
   const [published, setPublished] = usePersistent<Record<string, PaperBody>>('published', {})
-  const [editing, setEditing] = useState(false)
   const [reviewing, setReviewing] = useState(false)
   const [waiting, setWaiting] = useState(false)
   const [writingCount, setWritingCount] = useState(0)
@@ -214,10 +213,7 @@ export function App() {
           aria-selected={role === r.role}
           aria-label={r.label}
           className={role === r.role ? 'on' : ''}
-          onClick={() => {
-            setEditing(false)
-            setRole(r.role)
-          }}
+          onClick={() => setRole(r.role)}
         >
           {r.icon}
           {!narrow && ` ${r.label}`}
@@ -291,12 +287,7 @@ export function App() {
       role={role}
       item={item}
       paper={role === 'chef' ? manual[item.id] : published[item.id] && { ...published[item.id], history: [] }}
-      editing={role === 'chef' && editing}
-      onToggleEdit={() => setEditing(!editing)}
-      onPublish={() => {
-        setEditing(false)
-        setReviewing(true)
-      }}
+      onPublish={() => setReviewing(true)}
       onChange={(body, note) => edit(item.id, body, note)}
       titleOf={titleOf}
       onOpen={setOpenId}
@@ -359,7 +350,6 @@ export function App() {
           onFix={(id) => {
             setReviewing(false)
             setOpenId(id)
-            setEditing(true)
             if (narrow) setPaperOpen(true)
           }}
           onPublish={() => {

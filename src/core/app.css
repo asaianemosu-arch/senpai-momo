@@ -195,28 +195,10 @@ details.hist summary { cursor: pointer; }
 /* paper head: title, then the chef's two buttons */
 .paper-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .paper-head h2 { flex: 1 0 100%; margin: 0; }
-.edit-toggle { margin-left: auto; border: 1px solid var(--line); background: var(--bg); border-radius: 99px; padding: 4px 14px; font-size: 14px; }
-.edit-toggle.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 .send-btn { border: none; background: var(--accent); color: #fff; border-radius: 99px; padding: 4px 14px; font-size: 14px; }
-.editing-bar { background: var(--accent-soft); border-radius: 10px; padding: 6px 12px; font-size: 13px; margin-bottom: 12px; }
 
-/* editing the paper */
 .grow { flex: 1; min-width: 0; }
-.editable { cursor: text; border-radius: 6px; }
-.editable:hover { background: var(--accent-soft); }
-ol.steps.edit { list-style: none; padding-left: 0; counter-reset: s; }
-ol.steps.edit > li { counter-increment: s; display: flex; align-items: flex-start; gap: 8px; padding: 4px; }
-ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: var(--mute); padding-top: 2px; }
-.tools { display: flex; gap: 4px; flex: none; }
-.tools button { border: 1px solid var(--line); background: var(--pane); border-radius: 8px; width: 34px; height: 34px; font-size: 15px; }
-.editbox { flex: 1; }
-.editbox textarea { width: 100%; font: inherit; font-size: 16px; border: 2px solid var(--accent); border-radius: 8px; padding: 6px 10px; resize: vertical; color: var(--ink); background: var(--pane); }
-.editbox .why-in { width: 100%; font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; margin-top: 4px; color: var(--ink); }
-.editbox .acts { display: flex; gap: 8px; margin-top: 6px; }
-.editbox .acts button { border-radius: 99px; padding: 4px 16px; font-size: 14px; border: 1px solid var(--line); background: var(--pane); }
-.editbox .acts .save { background: var(--accent); border-color: var(--accent); color: #fff; }
 .add { display: block; width: 100%; text-align: left; border: 1px dashed var(--line); background: transparent; border-radius: 8px; padding: 6px 12px; color: var(--mute); font-size: 14px; margin-top: 6px; }
-.add-box { margin-top: 8px; }
 
 /* check before handing out */
 .overlay { position: fixed; inset: 0; background: rgba(59, 42, 38, .35); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
@@ -386,7 +368,6 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 .narrow .time { font-size: 15px; }
 
 .time-chip { font-size: 12px; font-weight: 400; color: var(--accent); background: var(--accent-soft); border-radius: 99px; padding: 1px 10px; white-space: nowrap; flex: none; }
-.time-chip.add-time { color: var(--mute); background: var(--bg); border: 1px dashed var(--line); }
 
 /* weekdays on the timetable, and short facts on a bundle */
 .days { display: flex; gap: 6px; margin: 16px 0 16px; flex-wrap: wrap; }
@@ -498,7 +479,6 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
   background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); font-size: 12px; display: grid; place-items: center;
 }
 .bundle-photo .photo-x { right: 8px; top: 8px; width: 32px; height: 32px; font-size: 14px; }
-.photo-add { margin: 0 0 10px; }
 
 /* a recipe's 配合: one material a line */
 .recipe-list { border: 1px solid var(--line); border-radius: 12px; margin: 4px 0 12px; overflow: hidden; background: var(--pane); }
@@ -508,11 +488,49 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 .ing > b { flex: 0 0 5.5em; }
 .ing > span { flex: 1; }
 .ing small { display: block; color: var(--mute); font-size: 12px; }
-.ing.editable { cursor: pointer; }
-.ing .tools { flex: none; }
-.recipe-list .editbox { margin: 6px 12px; }
 .recipe-list .add { margin: 6px 12px 10px; }
 .fact-in { display: flex; gap: 6px; }
-.fact-in input { flex: 1; min-width: 0; font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+.fact-in input, .fact-in textarea { flex: 1; min-width: 0; font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
 .fact-in input:first-child { flex: 0 0 38%; }
-.bundle-photo figcaption.editable { cursor: pointer; }
+
+/* fixing the paper one part at a time */
+.send-btn { margin-left: auto; }
+.pen {
+  flex: none; border: 1px solid var(--line); background: var(--pane); border-radius: 99px;
+  font-size: 13px; line-height: 1.4; padding: 1px 9px; color: var(--accent); cursor: pointer; white-space: nowrap;
+}
+.pen.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; padding: 3px 12px; }
+.with-pen { display: flex; gap: 8px; align-items: flex-start; }
+.with-pen .facts { flex: 1; }
+.rule, .tip { display: flex; gap: 8px; align-items: flex-start; }
+.rule .grow, .tip .grow { flex: 1; }
+.recipe-head { display: flex; align-items: center; justify-content: space-between; }
+.part-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--mute); margin: 10px 0 2px; }
+.part.editing, .recipe-list.editing { border: 2px solid var(--accent); border-radius: 12px; padding: 8px 10px; margin: 8px 0; background: var(--pane); }
+.recipe-list.editing { padding: 0; }
+.part.editing > .part-head { margin-top: 0; }
+.part.editing textarea, .field input, .field textarea {
+  width: 100%; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; color: var(--ink); background: var(--pane); resize: vertical;
+}
+.erow { padding: 8px 0; border-top: 1px dashed var(--line); }
+.recipe-list .erow { padding: 8px 10px; }
+.part-head + .erow, .recipe-head + .erow { border-top: none; }
+.erow-top { display: flex; gap: 6px; align-items: flex-start; }
+.erow-top .n { color: var(--mute); padding-top: 6px; }
+.erow .why-in { width: 100%; font: inherit; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px; margin-top: 4px; color: var(--ink); }
+.erow-tools { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.mini { display: inline-flex; gap: 4px; margin-left: auto; }
+.erow > .mini { display: flex; justify-content: flex-end; margin-top: 4px; }
+.mini button, .mini-btn { border: 1px solid var(--line); background: var(--pane); border-radius: 8px; min-width: 32px; height: 30px; font-size: 13px; padding: 0 8px; }
+.field { display: block; margin-bottom: 8px; }
+.field > span { display: block; font-size: 12px; color: var(--mute); margin-bottom: 2px; }
+.part.editing .day-pick { margin: 0 0 8px; }
+.part.editing .add, .recipe-list.editing .add { margin: 8px 0 2px; }
+.recipe-list.editing .add { margin: 6px 10px 10px; width: auto; }
+.bundle-photo .part.editing { margin-top: 6px; }
+.bundle-photo .with-pen { margin-top: 4px; font-size: 13px; color: var(--mute); }
+.fact-in { align-items: flex-start; }
+.fact-in textarea { font-size: 16px; resize: vertical; color: var(--ink); background: var(--pane); }
+.fact-in input { font-size: 16px; }
+details.bundle > summary { flex-wrap: wrap; }
+details.bundle > summary .grow { min-width: 8em; }

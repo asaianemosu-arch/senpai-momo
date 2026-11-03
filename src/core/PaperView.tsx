@@ -1,5 +1,5 @@
-import { useRef, useState, type ReactNode } from 'react'
-import { WEEKDAYS, type Bundle, type Paper, type PaperBody, type Role, type ShelfItem, type Step, type Weekday } from './types'
+import { useRef, useState } from 'react'
+import { WEEKDAYS, type Bundle, type Paper, type PaperBody, type Role, type ShelfItem, type Weekday } from './types'
 import { Facts, Recipe } from './Timetable'
 import { BundlePhoto, StepPhoto } from './ShowCard'
 import { trouble } from './Handover'
@@ -10,8 +10,6 @@ interface Props {
   role: Role
   item: ShelfItem
   paper: Paper | undefined
-  editing: boolean
-  onToggleEdit: () => void
   onPublish: () => void
   onChange: (body: PaperBody, note: string) => void
   titleOf: (id: string) => string
@@ -20,15 +18,18 @@ interface Props {
   onClose?: () => void
 }
 
-// Which piece of the paper is open for typing, and what has been typed so far.
-type Draft =
-  | { kind: 'step'; b: number; s: number; text: string; why: string; remind: boolean }
-  | { kind: 'rule'; r: number; text: string }
-  | { kind: 'title'; b: number; text: string }
-  | { kind: 'time'; b: number; text: string }
-  | { kind: 'note'; b: number; text: string }
-  | { kind: 'caption'; b: number; text: string }
-  | { kind: 'fact'; b: number; f: number; label: string; text: string }
+// The chef fixes the paper one part at a time: the ✏️ beside a part opens
+// it, and "✓ できた" puts the changes on the paper.
+type Part = 'head' | 'caption' | 'facts' | 'steps' | 'tips'
+type Open = { b: number; part: Part; work: Bundle } | { rules: string[] }
+
+const WHAT: Record<Part, string> = {
+  head: '名前・時刻',
+  caption: '写真',
+  facts: '札',
+  steps: '手順',
+  tips: 'ポイント',
+}
 
 // Minutes from midnight for sorting the timetable: "4:30", "4時半", "10時までに".
 // Words alone ("帰る前") give -1 and keep their place by the part of the day.
@@ -54,173 +55,123 @@ function move<T>(list: T[], from: number, to: number): T[] {
   return next
 }
 
+function put<T>(list: T[], i: number, x: T): T[] {
+  return list.map((y, j) => (j === i ? x : y))
+}
+
+// What the chef typed, without the lines left empty.
+function tidy(b: Bundle): Bundle {
+  const time = b.time?.trim()
+  return {
+    ...b,
+    title: b.title.trim() || b.title,
+    time: time || undefined,
+    minutes: time ? minutesOf(time) : undefined,
+    note: b.note.trim(),
+    photo: b.photo && { ...b.photo, caption: b.photo.caption.trim() },
+    facts: b.facts?.map((f) => ({ label: f.label.trim(), text: f.text.trim() })).filter((f) => f.label || f.text),
+    steps: b.steps.map((s) => ({ ...s, text: s.text.trim(), why: s.why.trim() })).filter((s) => s.text),
+    tips: b.tips.map((t) => ({ label: t.label.trim(), text: t.text.trim() })).filter((t) => t.label || t.text),
+  }
+}
+
 export function PaperView(props: Props) {
-  const { role, item, paper, editing, titleOf, onOpen } = props
-  const [draft, setDraft] = useState<Draft | null>(null)
-  // Where a photo chosen with "📷 写真を足す" goes: a bundle, or one of its steps.
-  const [photoFor, setPhotoFor] = useState<{ b: number; s?: number } | null>(null)
+  const { role, item, paper, titleOf, onOpen } = props
+  const [open, setOpen] = useState<Open | null>(null)
   const [photoNote, setPhotoNote] = useState('')
+  // Which step a chosen photo goes to (undefined: the bundle itself).
+  const photoFor = useRef<number | undefined>(undefined)
   const picker = useRef<HTMLInputElement>(null)
   const canEdit = role === 'chef'
   const empty = !paper || (paper.rules.length === 0 && paper.bundles.length === 0)
   const body: PaperBody = { rules: paper?.rules ?? [], bundles: paper?.bundles ?? [] }
 
-  function change(next: PaperBody, what: string) {
-    props.onChange(next, `シェフが直しました（${what}）`)
-    setDraft(null)
+  function finish() {
+    if (!open) return
+    if ('rules' in open) {
+      const rules = open.rules.map((r) => r.trim()).filter(Boolean)
+      props.onChange({ ...body, rules }, 'シェフが直しました（大切なこと）')
+    } else {
+      const bundles = body.bundles.map((x, i) => (i === open.b ? tidy(open.work) : x))
+      const what = open.part === 'facts' && item.untimed ? '配合' : WHAT[open.part]
+      props.onChange({ ...body, bundles }, `シェフが直しました（${open.work.title}の${what}）`)
+    }
+    setOpen(null)
   }
 
-  function setBundle(b: number, bundle: Bundle, what: string) {
-    change({ ...body, bundles: body.bundles.map((x, i) => (i === b ? bundle : x)) }, what)
-  }
-
-  function setSteps(b: number, steps: Step[]) {
-    setBundle(b, { ...body.bundles[b], steps }, body.bundles[b].title)
-  }
-
-  function addPhoto(b: number, s?: number) {
+  // Opening another part first puts down what was being fixed.
+  function start(next: Open) {
+    finish()
     setPhotoNote('')
-    setPhotoFor({ b, s })
+    setOpen(next)
+  }
+
+  const isOpen = (b: number, part: Part) => !!open && 'b' in open && open.b === b && open.part === part
+  const work = open && 'work' in open ? open.work : null
+  const setWork = (w: Bundle) => setOpen((o) => (o && 'work' in o ? { ...o, work: w } : o))
+
+  const pen = (b: number, part: Part) => {
+    if (!canEdit) return null
+    const on = isOpen(b, part)
+    return (
+      <button
+        type="button"
+        className={on ? 'pen on' : 'pen'}
+        aria-label={on ? 'できた' : '直す'}
+        onClick={(e) => {
+          e.preventDefault()
+          if (on) finish()
+          // Another part of the same bundle may be open: start from its changes.
+          else start({ b, part, work: structuredClone(work && open && 'b' in open && open.b === b ? tidy(work) : body.bundles[b]) })
+        }}
+      >
+        {on ? '✓ できた' : '✏️'}
+      </button>
+    )
+  }
+
+  function addPhoto(step?: number) {
+    setPhotoNote('')
+    photoFor.current = step
     picker.current?.click()
   }
 
   async function photoChosen(file: File) {
-    if (!photoFor) return
+    const step = photoFor.current
     try {
       const h = await readFile(file)
       if (h.media?.type !== 'image') throw new Error()
       const id = await keepPhoto(h.media.data)
-      const bundle = body.bundles[photoFor.b]
-      const s = photoFor.s
-      if (s === undefined) setBundle(photoFor.b, { ...bundle, photo: { id, caption: '' } }, `${bundle.title}の写真`)
-      else setSteps(photoFor.b, bundle.steps.map((x, i) => (i === s ? { ...x, photo: id } : x)))
+      setOpen((o) => {
+        if (!o || !('work' in o)) return o
+        const w = o.work
+        return {
+          ...o,
+          work:
+            step === undefined
+              ? { ...w, photo: { id, caption: w.photo?.caption ?? '' } }
+              : { ...w, steps: w.steps.map((s, i) => (i === step ? { ...s, photo: id } : s)) },
+        }
+      })
     } catch (e) {
-      setPhotoNote(trouble(e) || '写真を貼れませんでした。')
-    }
-    setPhotoFor(null)
-  }
-
-  function save() {
-    if (!draft) return
-    const text = draft.text.trim()
-    if (draft.kind === 'rule') {
-      const rules = text
-        ? body.rules.map((r, i) => (i === draft.r ? text : r))
-        : body.rules.filter((_, i) => i !== draft.r)
-      change({ ...body, rules }, '大切なこと')
-    } else if (draft.kind === 'time') {
-      const bundle = body.bundles[draft.b]
-      setBundle(draft.b, { ...bundle, time: text || undefined, minutes: text ? minutesOf(text) : undefined }, bundle.title)
-    } else if (draft.kind === 'title' && text) {
-      setBundle(draft.b, { ...body.bundles[draft.b], title: text }, text)
-    } else if (draft.kind === 'caption') {
-      const bundle = body.bundles[draft.b]
-      if (bundle.photo) setBundle(draft.b, { ...bundle, photo: { ...bundle.photo, caption: text } }, `${bundle.title}の写真`)
-      else setDraft(null)
-    } else if (draft.kind === 'fact') {
-      const bundle = body.bundles[draft.b]
-      const facts = bundle.facts ?? []
-      const label = draft.label.trim()
-      const fact = { label, text }
-      const next =
-        !label && !text
-          ? facts.filter((_, i) => i !== draft.f)
-          : draft.f === facts.length
-            ? [...facts, fact]
-            : facts.map((x, i) => (i === draft.f ? fact : x))
-      setBundle(draft.b, { ...bundle, facts: next }, bundle.title)
-    } else if (draft.kind === 'note') {
-      setBundle(draft.b, { ...body.bundles[draft.b], note: text }, body.bundles[draft.b].title)
-    } else if (draft.kind === 'step') {
-      const steps = body.bundles[draft.b].steps
-      setSteps(
-        draft.b,
-        text
-          ? steps.map((s, i) =>
-              i === draft.s ? { ...s, text, why: draft.why.trim(), remind: draft.remind } : s,
-            )
-          : steps.filter((_, i) => i !== draft.s),
-      )
-    } else {
-      setDraft(null)
+      setPhotoNote(trouble(e))
     }
   }
 
-  const editBox = (rows = 2) =>
-    draft && (
-      <div className="editbox">
-        {draft.kind === 'fact' ? (
-          <div className="fact-in">
-            <input
-              autoFocus
-              placeholder={item.untimed ? '材料' : '見出し'}
-              value={draft.label}
-              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-            />
-            <input
-              placeholder={item.untimed ? '分量' : '中身'}
-              value={draft.text}
-              onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-            />
-          </div>
-        ) : (
-        <textarea
-          rows={rows}
-          autoFocus
-          placeholder={draft.kind === 'time' ? '例：4:30、10時までに、帰る前（消すと時間割から外れます）' : undefined}
-          value={draft.text}
-          onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-        />
-        )}
-        {draft.kind === 'step' && (
-          <>
-            <input
-              className="why-in"
-              placeholder="理由（あれば）"
-              value={draft.why}
-              onChange={(e) => setDraft({ ...draft, why: e.target.value })}
-            />
-            <label className="remind-in">
-              <input
-                type="checkbox"
-                checked={draft.remind}
-                onChange={(e) => setDraft({ ...draft, remind: e.target.checked })}
-              />
-              忘れずに
-            </label>
-          </>
-        )}
-        <div className="acts">
-          <button type="button" className="save" onClick={save}>
-            直す
-          </button>
-          <button type="button" onClick={() => setDraft(null)}>
-            やめる
-          </button>
-        </div>
-      </div>
-    )
-
-  const chefButtons = canEdit && !empty && (
-    <>
-      <button
-        type="button"
-        className={editing ? 'edit-toggle on' : 'edit-toggle'}
-        onClick={() => {
-          setDraft(null)
-          props.onToggleEdit()
-        }}
-      >
-        {editing ? '✏️ 直しています' : '✏️ 直す'}
-      </button>
-      <button type="button" className="send-btn" onClick={props.onPublish}>
-        📣 スタッフに配る
-      </button>
-    </>
+  const publishButton = canEdit && !empty && (
+    <button
+      type="button"
+      className="send-btn"
+      onClick={() => {
+        finish()
+        props.onPublish()
+      }}
+    >
+      📣 スタッフに配る
+    </button>
   )
 
-  const is = (d: Partial<Draft>) =>
-    !!draft && Object.entries(d).every(([k, v]) => (draft as Record<string, unknown>)[k] === v)
+  const rulesEdit = open && 'rules' in open ? open.rules : null
 
   return (
     <section className={props.onClose ? 'page sheet-page' : 'page'}>
@@ -234,15 +185,10 @@ export function PaperView(props: Props) {
               ✕
             </button>
           ) : (
-            chefButtons
+            publishButton
           )}
         </div>
 
-        {editing && (
-          <div className="editing-bar">
-            直したいところを押すと、文字を直せます。⬆︎⬇︎で順番、🗑で消す。終わったら右上の釦をもう一度。
-          </div>
-        )}
         {photoNote && <p className="hand-note">{photoNote}</p>}
         <input
           ref={picker}
@@ -258,247 +204,306 @@ export function PaperView(props: Props) {
 
         {empty ? (
           <p className="blank">
-            {role === 'chef'
-              ? 'まだ白い紙です。シェフのお話から、モモが書きます。'
-              : 'まだ配られていません。'}
+            {role === 'chef' ? 'まだ白い紙です。シェフのお話から、モモが書きます。' : 'まだ配られていません。'}
           </p>
         ) : (
           <>
-            {body.rules.map((r, i) =>
-              is({ kind: 'rule', r: i }) ? (
-                <div key={i}>{editBox(1)}</div>
-              ) : (
-                <div
-                  key={i}
-                  className={editing ? 'rule editable' : 'rule'}
-                  onClick={editing ? () => setDraft({ kind: 'rule', r: i, text: r }) : undefined}
-                >
-                  <b>大切なこと</b>　{r}
+            {rulesEdit ? (
+              <div className="part editing">
+                <div className="part-head">
+                  <span>大切なこと</span>
+                  <button type="button" className="pen on" onClick={finish}>
+                    ✓ できた
+                  </button>
                 </div>
-              ),
+                {rulesEdit.map((r, i) => (
+                  <div key={i} className="erow">
+                    <textarea rows={2} value={r} onChange={(e) => setOpen({ rules: put(rulesEdit, i, e.target.value) })} />
+                    <Mini
+                      onUp={() => setOpen({ rules: move(rulesEdit, i, i - 1) })}
+                      onDown={() => setOpen({ rules: move(rulesEdit, i, i + 1) })}
+                      onDrop={() => setOpen({ rules: rulesEdit.filter((_, j) => j !== i) })}
+                    />
+                  </div>
+                ))}
+                <button type="button" className="add" onClick={() => setOpen({ rules: [...rulesEdit, ''] })}>
+                  ＋ 大切なことを足す
+                </button>
+              </div>
+            ) : (
+              body.rules.map((r, i) => (
+                <div key={i} className="rule">
+                  <span className="grow">
+                    <b>大切なこと</b>　{r}
+                  </span>
+                  {canEdit && i === 0 && (
+                    <button type="button" className="pen" aria-label="直す" onClick={() => start({ rules: [...body.rules] })}>
+                      ✏️
+                    </button>
+                  )}
+                </div>
+              ))
             )}
 
-            {body.bundles.map((b, bi) => (
-              <details key={`${item.id}-${bi}`} className="bundle" open>
-                <summary>
-                  <span className="ic">{b.icon}</span>
-                  {is({ kind: 'title', b: bi }) ? (
-                    <span className="grow" onClick={(e) => e.preventDefault()}>
-                      {editBox(1)}
-                    </span>
-                  ) : (
-                    <span
-                      className={editing ? 'grow editable' : 'grow'}
-                      onClick={
-                        editing
-                          ? (e) => {
-                              e.preventDefault()
-                              setDraft({ kind: 'title', b: bi, text: b.title })
-                            }
-                          : undefined
-                      }
-                    >
-                      {b.title}
-                    </span>
-                  )}
-                  {is({ kind: 'time', b: bi }) ? (
-                    <span className="grow" onClick={(e) => e.preventDefault()}>
-                      {editBox(1)}
-                    </span>
-                  ) : editing ? (
-                    <span
-                      className={b.time ? 'time-chip editable' : 'time-chip add-time editable'}
-                      onClick={(e) => {
-                        e.preventDefault()
-                        setDraft({ kind: 'time', b: bi, text: b.time ?? '' })
-                      }}
-                    >
-                      {b.time ? `🕐 ${b.time}` : '＋ 時刻'}
-                    </span>
-                  ) : (
-                    b.time && <span className="time-chip">🕐 {b.time}</span>
-                  )}
-                  {!editing && !!b.days?.length && <span className="week">{b.days.join('・')}</span>}
-                  <span className="count">{b.steps.length}つ</span>
-                  <span className="chev">▸</span>
-                </summary>
-                <div className="body">
-                  {editing && (
-                    <div className="day-pick" aria-label="曜日（選ばなければ毎日）">
-                      <span>曜日</span>
-                      {WEEKDAYS.map((d) => (
-                        <button
-                          key={d}
-                          type="button"
-                          className={b.days?.includes(d) ? 'on' : ''}
-                          onClick={() => setBundle(bi, { ...b, days: toggleDay(b.days, d) }, b.title)}
-                        >
-                          {d}
-                        </button>
-                      ))}
-                      <small>{b.days?.length ? '' : '毎日'}</small>
-                    </div>
-                  )}
-                  <BundlePhoto
-                    photo={b.photo}
-                    caption={
-                      !editing ? undefined : is({ kind: 'caption', b: bi }) ? (
-                        editBox(2)
-                      ) : (
-                        <figcaption
-                          className="editable"
-                          onClick={() => setDraft({ kind: 'caption', b: bi, text: b.photo?.caption ?? '' })}
-                        >
-                          {b.photo?.caption || '＋ 写真の説明'}
-                        </figcaption>
-                      )
-                    }
-                  >
-                    {editing && (
-                      <button
-                        type="button"
-                        className="photo-x"
-                        aria-label="写真を外す"
-                        onClick={() => setBundle(bi, { ...b, photo: undefined }, `${b.title}の写真`)}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </BundlePhoto>
-                  {editing && !b.photo && (
-                    <button type="button" className="add photo-add" onClick={() => addPhoto(bi)}>
-                      📷 束の写真を足す
-                    </button>
-                  )}
-                  {editing ? (
-                    <FactsEdit
-                      title={item.untimed ? '配合' : '札'}
-                      facts={b.facts ?? []}
-                      draftAt={draft?.kind === 'fact' && draft.b === bi ? draft.f : null}
-                      editBox={editBox(1)}
-                      onPick={(f) =>
-                        setDraft({ kind: 'fact', b: bi, f, label: b.facts?.[f]?.label ?? '', text: b.facts?.[f]?.text ?? '' })
-                      }
-                      onChange={(facts) => setBundle(bi, { ...b, facts }, b.title)}
-                      adding={item.untimed ? '＋ 材料を足す' : '＋ 札を足す'}
-                    />
-                  ) : (
-                    !!b.facts?.length && (item.untimed ? <Recipe facts={b.facts} /> : <Facts facts={b.facts} />)
-                  )}
-                  {is({ kind: 'note', b: bi }) ? (
-                    editBox(2)
-                  ) : b.note ? (
-                    <p
-                      className={editing ? 'from editable' : 'from'}
-                      onClick={editing ? () => setDraft({ kind: 'note', b: bi, text: b.note }) : undefined}
-                    >
-                      {b.note}
-                    </p>
-                  ) : null}
-
-                  <ol className={editing ? 'steps edit' : 'steps'}>
-                    {b.steps.map((s, si) => (
-                      <li key={si}>
-                        {is({ kind: 'step', b: bi, s: si }) ? (
-                          editBox(2)
-                        ) : (
-                          <>
-                            <StepPhoto id={s.photo}>
-                              {editing && (
-                                <button
-                                  type="button"
-                                  className="photo-x"
-                                  aria-label="写真を外す"
-                                  onClick={() =>
-                                    setSteps(bi, b.steps.map((x, i) => (i === si ? { ...x, photo: undefined } : x)))
-                                  }
-                                >
-                                  ✕
-                                </button>
-                              )}
-                            </StepPhoto>
-                            <span
-                              className={editing ? 'grow editable' : 'grow'}
-                              onClick={
-                                editing
-                                  ? () =>
-                                      setDraft({
-                                        kind: 'step',
-                                        b: bi,
-                                        s: si,
-                                        text: s.text,
-                                        why: s.why,
-                                        remind: !!s.remind,
-                                      })
-                                  : undefined
-                              }
+            {body.bundles.map((shown, bi) => {
+              const b = work && open && 'b' in open && open.b === bi ? work : shown
+              const facts = b.facts ?? []
+              return (
+                <details key={`${item.id}-${bi}`} className="bundle" open>
+                  <summary>
+                    <span className="ic">{b.icon}</span>
+                    <span className="grow">{b.title}</span>
+                    {b.time && <span className="time-chip">🕐 {b.time}</span>}
+                    {!!b.days?.length && <span className="week">{b.days.join('・')}</span>}
+                    {pen(bi, 'head')}
+                    <span className="count">{b.steps.length}つ</span>
+                    <span className="chev">▸</span>
+                  </summary>
+                  <div className="body">
+                    {isOpen(bi, 'head') && (
+                      <div className="part editing">
+                        <label className="field">
+                          <span>名前</span>
+                          <input value={b.title} onChange={(e) => setWork({ ...b, title: e.target.value })} />
+                        </label>
+                        <label className="field">
+                          <span>時刻</span>
+                          <input
+                            value={b.time ?? ''}
+                            placeholder="例：4:30、10時までに、帰る前"
+                            onChange={(e) => setWork({ ...b, time: e.target.value })}
+                          />
+                        </label>
+                        <div className="day-pick" aria-label="曜日（選ばなければ毎日）">
+                          <span>曜日</span>
+                          {WEEKDAYS.map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              className={b.days?.includes(d) ? 'on' : ''}
+                              onClick={() => setWork({ ...b, days: toggleDay(b.days, d) })}
                             >
-                              {s.remind && <span className="remind">忘れずに</span>}
-                              {s.text}
-                              {s.why && <span className="why">{s.why}</span>}
-                              {s.link && !editing && (
-                                <button type="button" className="link" onClick={() => onOpen(s.link!)}>
-                                  {titleOf(s.link)} を見る
-                                </button>
-                              )}
-                            </span>
-                            {editing && (
-                              <span className="tools">
-                                {!s.photo && (
-                                  <button type="button" title="写真を足す" onClick={() => addPhoto(bi, si)}>
-                                    📷
-                                  </button>
-                                )}
-                                <button type="button" title="上へ" onClick={() => setSteps(bi, move(b.steps, si, si - 1))}>
-                                  ⬆︎
-                                </button>
-                                <button type="button" title="下へ" onClick={() => setSteps(bi, move(b.steps, si, si + 1))}>
-                                  ⬇︎
-                                </button>
-                                <button
-                                  type="button"
-                                  title="消す"
-                                  onClick={() => setSteps(bi, b.steps.filter((_, i) => i !== si))}
-                                >
-                                  🗑
-                                </button>
-                              </span>
-                            )}
-                          </>
+                              {d}
+                            </button>
+                          ))}
+                          <small>{b.days?.length ? '' : '毎日'}</small>
+                        </div>
+                        <label className="field">
+                          <span>前置き</span>
+                          <textarea rows={2} value={b.note} onChange={(e) => setWork({ ...b, note: e.target.value })} />
+                        </label>
+                        {!b.photo && (
+                          <button type="button" className="add" onClick={() => addPhoto()}>
+                            📷 束の写真を足す
+                          </button>
                         )}
-                      </li>
-                    ))}
-                  </ol>
-                  {editing && !draft && (
-                    <button
-                      type="button"
-                      className="add"
-                      onClick={() =>
-                        setDraft({ kind: 'step', b: bi, s: b.steps.length, text: '', why: '', remind: false })
-                      }
-                    >
-                      ＋ 手順を足す
-                    </button>
-                  )}
-                  {is({ kind: 'step', b: bi, s: b.steps.length }) && (
-                    <AddStep
-                      draft={draft as Extract<Draft, { kind: 'step' }>}
-                      setDraft={setDraft}
-                      onSave={(text, why, remind) =>
-                        setSteps(bi, [...b.steps, { text, why, link: null, remind }])
+                      </div>
+                    )}
+
+                    <BundlePhoto
+                      photo={b.photo}
+                      caption={
+                        isOpen(bi, 'caption') ? (
+                          <div className="part editing">
+                            <textarea
+                              rows={2}
+                              value={b.photo?.caption ?? ''}
+                              placeholder="写っていること"
+                              onChange={(e) => b.photo && setWork({ ...b, photo: { ...b.photo, caption: e.target.value } })}
+                            />
+                            <div className="erow-tools">
+                              <button type="button" className="mini-btn" onClick={() => setWork({ ...b, photo: undefined })}>
+                                写真を外す
+                              </button>
+                              {pen(bi, 'caption')}
+                            </div>
+                          </div>
+                        ) : (
+                          <figcaption className="with-pen">
+                            <span className="grow">{b.photo?.caption}</span>
+                            {pen(bi, 'caption')}
+                          </figcaption>
+                        )
                       }
                     />
-                  )}
 
-                  {b.tips.map((t, j) => (
-                    <div key={j} className="tip">
-                      <span className="tip-tag">ポイント</span>
-                      <b>{t.label}</b>　{t.text}
-                    </div>
-                  ))}
-                </div>
-              </details>
-            ))}
+                    {isOpen(bi, 'facts') ? (
+                      <div className="recipe-list editing">
+                        <div className="recipe-head">
+                          <span>{item.untimed ? '配合' : '札'}</span>
+                          {pen(bi, 'facts')}
+                        </div>
+                        {facts.map((f, i) => (
+                          <div key={i} className="erow">
+                            <div className="fact-in">
+                              <input
+                                placeholder={item.untimed ? '材料' : '見出し'}
+                                value={f.label}
+                                onChange={(e) => setWork({ ...b, facts: put(facts, i, { ...f, label: e.target.value }) })}
+                              />
+                              <textarea
+                                rows={Math.min(4, Math.ceil(f.text.length / 11) || 1)}
+                                placeholder={item.untimed ? '分量' : '中身'}
+                                value={f.text}
+                                onChange={(e) => setWork({ ...b, facts: put(facts, i, { ...f, text: e.target.value }) })}
+                              />
+                            </div>
+                            <Mini
+                              onUp={() => setWork({ ...b, facts: move(facts, i, i - 1) })}
+                              onDown={() => setWork({ ...b, facts: move(facts, i, i + 1) })}
+                              onDrop={() => setWork({ ...b, facts: facts.filter((_, j) => j !== i) })}
+                            />
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="add"
+                          onClick={() => setWork({ ...b, facts: [...facts, { label: '', text: '' }] })}
+                        >
+                          {item.untimed ? '＋ 材料を足す' : '＋ 札を足す'}
+                        </button>
+                      </div>
+                    ) : item.untimed ? (
+                      (facts.length > 0 || canEdit) && <Recipe facts={facts} pen={pen(bi, 'facts')} />
+                    ) : (
+                      facts.length > 0 && (
+                        <div className="with-pen">
+                          <Facts facts={facts} />
+                          {pen(bi, 'facts')}
+                        </div>
+                      )
+                    )}
+
+                    {b.note && !isOpen(bi, 'head') && <p className="from">{b.note}</p>}
+
+                    {canEdit && (
+                      <div className="part-head steps-head">
+                        <span>手順</span>
+                        {pen(bi, 'steps')}
+                      </div>
+                    )}
+                    {isOpen(bi, 'steps') ? (
+                      <div className="part editing">
+                        {b.steps.map((s, si) => (
+                          <div key={si} className="erow">
+                            <div className="erow-top">
+                              <span className="n">{si + 1}.</span>
+                              <textarea
+                                rows={2}
+                                value={s.text}
+                                onChange={(e) => setWork({ ...b, steps: put(b.steps, si, { ...s, text: e.target.value }) })}
+                              />
+                            </div>
+                            <input
+                              className="why-in"
+                              placeholder="理由（あれば）"
+                              value={s.why}
+                              onChange={(e) => setWork({ ...b, steps: put(b.steps, si, { ...s, why: e.target.value }) })}
+                            />
+                            <div className="erow-tools">
+                              <label className="remind-in">
+                                <input
+                                  type="checkbox"
+                                  checked={!!s.remind}
+                                  onChange={(e) => setWork({ ...b, steps: put(b.steps, si, { ...s, remind: e.target.checked }) })}
+                                />
+                                忘れずに
+                              </label>
+                              {s.photo ? (
+                                <StepPhoto id={s.photo}>
+                                  <button
+                                    type="button"
+                                    className="photo-x"
+                                    aria-label="写真を外す"
+                                    onClick={() => setWork({ ...b, steps: put(b.steps, si, { ...s, photo: undefined }) })}
+                                  >
+                                    ✕
+                                  </button>
+                                </StepPhoto>
+                              ) : (
+                                <button type="button" className="mini-btn" title="写真を足す" onClick={() => addPhoto(si)}>
+                                  📷
+                                </button>
+                              )}
+                              <Mini
+                                onUp={() => setWork({ ...b, steps: move(b.steps, si, si - 1) })}
+                                onDown={() => setWork({ ...b, steps: move(b.steps, si, si + 1) })}
+                                onDrop={() => setWork({ ...b, steps: b.steps.filter((_, j) => j !== si) })}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          className="add"
+                          onClick={() => setWork({ ...b, steps: [...b.steps, { text: '', why: '', link: null }] })}
+                        >
+                          ＋ 手順を足す
+                        </button>
+                      </div>
+                    ) : (
+                      <ol className="steps">
+                        {b.steps.map((s, si) => (
+                          <li key={si}>
+                            <StepPhoto id={s.photo} />
+                            {s.remind && <span className="remind">忘れずに</span>}
+                            {s.text}
+                            {s.why && <span className="why">{s.why}</span>}
+                            {s.link && (
+                              <button type="button" className="link" onClick={() => onOpen(s.link!)}>
+                                {titleOf(s.link)} を見る
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+
+                    {isOpen(bi, 'tips') ? (
+                      <div className="part editing">
+                        <div className="part-head">
+                          <span>ポイント</span>
+                          {pen(bi, 'tips')}
+                        </div>
+                        {b.tips.map((t, i) => (
+                          <div key={i} className="erow">
+                            <input
+                              className="why-in"
+                              placeholder="見出し"
+                              value={t.label}
+                              onChange={(e) => setWork({ ...b, tips: put(b.tips, i, { ...t, label: e.target.value }) })}
+                            />
+                            <textarea
+                              rows={2}
+                              value={t.text}
+                              onChange={(e) => setWork({ ...b, tips: put(b.tips, i, { ...t, text: e.target.value }) })}
+                            />
+                            <Mini
+                              onUp={() => setWork({ ...b, tips: move(b.tips, i, i - 1) })}
+                              onDown={() => setWork({ ...b, tips: move(b.tips, i, i + 1) })}
+                              onDrop={() => setWork({ ...b, tips: b.tips.filter((_, j) => j !== i) })}
+                            />
+                          </div>
+                        ))}
+                        <button type="button" className="add" onClick={() => setWork({ ...b, tips: [...b.tips, { label: '', text: '' }] })}>
+                          ＋ ポイントを足す
+                        </button>
+                      </div>
+                    ) : (
+                      b.tips.map((t, j) => (
+                        <div key={j} className="tip">
+                          <span className="grow">
+                            <span className="tip-tag">ポイント</span>
+                            <b>{t.label}</b>　{t.text}
+                          </span>
+                          {j === 0 && pen(bi, 'tips')}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </details>
+              )
+            })}
 
             {canEdit && paper && paper.history.length > 0 && (
               <details className="hist">
@@ -511,114 +516,24 @@ export function PaperView(props: Props) {
           </>
         )}
       </div>
-      {props.onClose && chefButtons && <div className="sheet-foot">{chefButtons}</div>}
+      {props.onClose && publishButton && <div className="sheet-foot">{publishButton}</div>}
     </section>
   )
 }
 
-// 配合 (or a bundle's short facts) in edit mode: one a line, to fix, move or drop.
-function FactsEdit({
-  title,
-  facts,
-  draftAt,
-  editBox,
-  onPick,
-  onChange,
-  adding,
-}: {
-  title: string
-  facts: { label: string; text: string }[]
-  draftAt: number | null
-  editBox: ReactNode
-  onPick: (f: number) => void
-  onChange: (facts: { label: string; text: string }[]) => void
-  adding: string
-}) {
+// ⬆︎⬇︎🗑 under a line being fixed.
+function Mini({ onUp, onDown, onDrop }: { onUp: () => void; onDown: () => void; onDrop: () => void }) {
   return (
-    <div className="recipe-list">
-      <div className="recipe-head">{title}</div>
-      {facts.map((f, i) =>
-        draftAt === i ? (
-          <div key={i}>{editBox}</div>
-        ) : (
-          <div key={i} className="ing">
-            <b className="editable" onClick={() => onPick(i)}>
-              {f.label}
-            </b>
-            <span className="editable" onClick={() => onPick(i)}>
-              {f.text}
-            </span>
-            <span className="tools">
-              <button type="button" title="上へ" onClick={() => onChange(move(facts, i, i - 1))}>
-                ⬆︎
-              </button>
-              <button type="button" title="下へ" onClick={() => onChange(move(facts, i, i + 1))}>
-                ⬇︎
-              </button>
-              <button type="button" title="消す" onClick={() => onChange(facts.filter((_, j) => j !== i))}>
-                🗑
-              </button>
-            </span>
-          </div>
-        ),
-      )}
-      {draftAt === facts.length ? (
-        editBox
-      ) : (
-        draftAt === null && (
-          <button type="button" className="add" onClick={() => onPick(facts.length)}>
-            {adding}
-          </button>
-        )
-      )}
-    </div>
-  )
-}
-
-function AddStep({
-  draft,
-  setDraft,
-  onSave,
-}: {
-  draft: Extract<Draft, { kind: 'step' }>
-  setDraft: (d: Draft | null) => void
-  onSave: (text: string, why: string, remind: boolean) => void
-}) {
-  return (
-    <div className="editbox add-box">
-      <textarea
-        rows={2}
-        autoFocus
-        placeholder="足す手順"
-        value={draft.text}
-        onChange={(e) => setDraft({ ...draft, text: e.target.value })}
-      />
-      <input
-        className="why-in"
-        placeholder="理由（あれば）"
-        value={draft.why}
-        onChange={(e) => setDraft({ ...draft, why: e.target.value })}
-      />
-      <label className="remind-in">
-        <input
-          type="checkbox"
-          checked={draft.remind}
-          onChange={(e) => setDraft({ ...draft, remind: e.target.checked })}
-        />
-        忘れずに
-      </label>
-      <div className="acts">
-        <button
-          type="button"
-          className="save"
-          onClick={() => draft.text.trim() && onSave(draft.text.trim(), draft.why.trim(), draft.remind)}
-        >
-          足す
-        </button>
-        <button type="button" onClick={() => setDraft(null)}>
-          やめる
-        </button>
-      </div>
-    </div>
+    <span className="mini">
+      <button type="button" title="上へ" onClick={onUp}>
+        ⬆︎
+      </button>
+      <button type="button" title="下へ" onClick={onDown}>
+        ⬇︎
+      </button>
+      <button type="button" title="消す" onClick={onDrop}>
+        🗑
+      </button>
+    </span>
   )
 }
