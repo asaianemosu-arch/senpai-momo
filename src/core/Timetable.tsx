@@ -150,3 +150,31 @@ export function Facts({ facts }: { facts: { label: string; text: string }[] }) {
     </span>
   )
 }
+
+// A note in brackets at the end of an amount ("6g（5.5gで再検証が要る）")
+// goes under it, small. Short ones like "（1袋）" stay with the amount.
+function splitNote(text: string): [string, string] {
+  const m = text.match(/^(.*\S)\s*[（(]([^（）()]{5,})[）)]$/)
+  return m ? [m[1], m[2]] : [text, '']
+}
+
+// A recipe's 配合: one material a line, the amount right after it.
+export function Recipe({ facts }: { facts: { label: string; text: string }[] }) {
+  return (
+    <div className="recipe-list">
+      <div className="recipe-head">配合</div>
+      {facts.map((f, i) => {
+        const [amount, note] = splitNote(f.text)
+        return (
+          <div key={i} className="ing">
+            <b>{f.label}</b>
+            <span>
+              {amount}
+              {note && <small>{note}</small>}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}

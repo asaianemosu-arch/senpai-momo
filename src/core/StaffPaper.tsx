@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Focus, PaperBody, ShelfItem } from './types'
 import { BundlePhoto, StepIcon } from './ShowCard'
-import { Facts } from './Timetable'
+import { Facts, Recipe } from './Timetable'
 
 interface Props {
   item: ShelfItem
@@ -65,7 +65,7 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
                   {open && (
                     <div className="fold-body">
                       <BundlePhoto photo={b.photo} />
-                      {!!b.facts?.length && <Facts facts={b.facts} />}
+                      {!!b.facts?.length && (item.untimed ? <Recipe facts={b.facts} /> : <Facts facts={b.facts} />)}
                       {b.note && <p className="from">{b.note}</p>}
                       {b.steps.map((s, i) => (
                         <div key={i} className={lit.includes(i + 1) ? 'ostep lit' : 'ostep'}>

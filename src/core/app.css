@@ -499,3 +499,20 @@ ol.steps.edit > li::before { content: counter(s) "."; min-width: 1.4em; color: v
 }
 .bundle-photo .photo-x { right: 8px; top: 8px; width: 32px; height: 32px; font-size: 14px; }
 .photo-add { margin: 0 0 10px; }
+
+/* a recipe's 配合: one material a line */
+.recipe-list { border: 1px solid var(--line); border-radius: 12px; margin: 4px 0 12px; overflow: hidden; background: var(--pane); }
+.recipe-head { background: var(--side); font-size: 13px; font-weight: 700; padding: 4px 12px; color: var(--mute); }
+.ing { display: flex; gap: 10px; align-items: baseline; padding: 6px 12px; border-top: 1px dashed var(--line); }
+.recipe-head + .ing { border-top: none; }
+.ing > b { flex: 0 0 5.5em; }
+.ing > span { flex: 1; }
+.ing small { display: block; color: var(--mute); font-size: 12px; }
+.ing.editable { cursor: pointer; }
+.ing .tools { flex: none; }
+.recipe-list .editbox { margin: 6px 12px; }
+.recipe-list .add { margin: 6px 12px 10px; }
+.fact-in { display: flex; gap: 6px; }
+.fact-in input { flex: 1; min-width: 0; font: inherit; border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px; }
+.fact-in input:first-child { flex: 0 0 38%; }
+.bundle-photo figcaption.editable { cursor: pointer; }

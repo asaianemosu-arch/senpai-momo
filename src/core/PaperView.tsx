@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { WEEKDAYS, type Bundle, type Paper, type PaperBody, type Role, type ShelfItem, type Step, type Weekday } from './types'
-import { Facts } from './Timetable'
+import { Facts, Recipe } from './Timetable'
 import { BundlePhoto, StepPhoto } from './ShowCard'
 import { trouble } from './Handover'
 import { readFile } from './files'
@@ -27,6 +27,8 @@ type Draft =
   | { kind: 'title'; b: number; text: string }
   | { kind: 'time'; b: number; text: string }
   | { kind: 'note'; b: number; text: string }
+  | { kind: 'caption'; b: number; text: string }
+  | { kind: 'fact'; b: number; f: number; label: string; text: string }
 
 // Minutes from midnight for sorting the timetable: "4:30", "4時半", "10時までに".
 // Words alone ("帰る前") give -1 and keep their place by the part of the day.
@@ -111,6 +113,22 @@ export function PaperView(props: Props) {
       setBundle(draft.b, { ...bundle, time: text || undefined, minutes: text ? minutesOf(text) : undefined }, bundle.title)
     } else if (draft.kind === 'title' && text) {
       setBundle(draft.b, { ...body.bundles[draft.b], title: text }, text)
+    } else if (draft.kind === 'caption') {
+      const bundle = body.bundles[draft.b]
+      if (bundle.photo) setBundle(draft.b, { ...bundle, photo: { ...bundle.photo, caption: text } }, `${bundle.title}の写真`)
+      else setDraft(null)
+    } else if (draft.kind === 'fact') {
+      const bundle = body.bundles[draft.b]
+      const facts = bundle.facts ?? []
+      const label = draft.label.trim()
+      const fact = { label, text }
+      const next =
+        !label && !text
+          ? facts.filter((_, i) => i !== draft.f)
+          : draft.f === facts.length
+            ? [...facts, fact]
+            : facts.map((x, i) => (i === draft.f ? fact : x))
+      setBundle(draft.b, { ...bundle, facts: next }, bundle.title)
     } else if (draft.kind === 'note') {
       setBundle(draft.b, { ...body.bundles[draft.b], note: text }, body.bundles[draft.b].title)
     } else if (draft.kind === 'step') {
@@ -131,6 +149,21 @@ export function PaperView(props: Props) {
   const editBox = (rows = 2) =>
     draft && (
       <div className="editbox">
+        {draft.kind === 'fact' ? (
+          <div className="fact-in">
+            <input
+              autoFocus
+              placeholder={item.untimed ? '材料' : '見出し'}
+              value={draft.label}
+              onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+            />
+            <input
+              placeholder={item.untimed ? '分量' : '中身'}
+              value={draft.text}
+              onChange={(e) => setDraft({ ...draft, text: e.target.value })}
+            />
+          </div>
+        ) : (
         <textarea
           rows={rows}
           autoFocus
@@ -138,6 +171,7 @@ export function PaperView(props: Props) {
           value={draft.text}
           onChange={(e) => setDraft({ ...draft, text: e.target.value })}
         />
+        )}
         {draft.kind === 'step' && (
           <>
             <input
@@ -305,7 +339,21 @@ export function PaperView(props: Props) {
                       <small>{b.days?.length ? '' : '毎日'}</small>
                     </div>
                   )}
-                  <BundlePhoto photo={b.photo}>
+                  <BundlePhoto
+                    photo={b.photo}
+                    caption={
+                      !editing ? undefined : is({ kind: 'caption', b: bi }) ? (
+                        editBox(2)
+                      ) : (
+                        <figcaption
+                          className="editable"
+                          onClick={() => setDraft({ kind: 'caption', b: bi, text: b.photo?.caption ?? '' })}
+                        >
+                          {b.photo?.caption || '＋ 写真の説明'}
+                        </figcaption>
+                      )
+                    }
+                  >
                     {editing && (
                       <button
                         type="button"
@@ -322,7 +370,21 @@ export function PaperView(props: Props) {
                       📷 束の写真を足す
                     </button>
                   )}
-                  {!!b.facts?.length && <Facts facts={b.facts} />}
+                  {editing ? (
+                    <FactsEdit
+                      title={item.untimed ? '配合' : '札'}
+                      facts={b.facts ?? []}
+                      draftAt={draft?.kind === 'fact' && draft.b === bi ? draft.f : null}
+                      editBox={editBox(1)}
+                      onPick={(f) =>
+                        setDraft({ kind: 'fact', b: bi, f, label: b.facts?.[f]?.label ?? '', text: b.facts?.[f]?.text ?? '' })
+                      }
+                      onChange={(facts) => setBundle(bi, { ...b, facts }, b.title)}
+                      adding={item.untimed ? '＋ 材料を足す' : '＋ 札を足す'}
+                    />
+                  ) : (
+                    !!b.facts?.length && (item.untimed ? <Recipe facts={b.facts} /> : <Facts facts={b.facts} />)
+                  )}
                   {is({ kind: 'note', b: bi }) ? (
                     editBox(2)
                   ) : b.note ? (
@@ -451,6 +513,65 @@ export function PaperView(props: Props) {
       </div>
       {props.onClose && chefButtons && <div className="sheet-foot">{chefButtons}</div>}
     </section>
+  )
+}
+
+// 配合 (or a bundle's short facts) in edit mode: one a line, to fix, move or drop.
+function FactsEdit({
+  title,
+  facts,
+  draftAt,
+  editBox,
+  onPick,
+  onChange,
+  adding,
+}: {
+  title: string
+  facts: { label: string; text: string }[]
+  draftAt: number | null
+  editBox: ReactNode
+  onPick: (f: number) => void
+  onChange: (facts: { label: string; text: string }[]) => void
+  adding: string
+}) {
+  return (
+    <div className="recipe-list">
+      <div className="recipe-head">{title}</div>
+      {facts.map((f, i) =>
+        draftAt === i ? (
+          <div key={i}>{editBox}</div>
+        ) : (
+          <div key={i} className="ing">
+            <b className="editable" onClick={() => onPick(i)}>
+              {f.label}
+            </b>
+            <span className="editable" onClick={() => onPick(i)}>
+              {f.text}
+            </span>
+            <span className="tools">
+              <button type="button" title="上へ" onClick={() => onChange(move(facts, i, i - 1))}>
+                ⬆︎
+              </button>
+              <button type="button" title="下へ" onClick={() => onChange(move(facts, i, i + 1))}>
+                ⬇︎
+              </button>
+              <button type="button" title="消す" onClick={() => onChange(facts.filter((_, j) => j !== i))}>
+                🗑
+              </button>
+            </span>
+          </div>
+        ),
+      )}
+      {draftAt === facts.length ? (
+        editBox
+      ) : (
+        draftAt === null && (
+          <button type="button" className="add" onClick={() => onPick(facts.length)}>
+            {adding}
+          </button>
+        )
+      )}
+    </div>
   )
 }
 

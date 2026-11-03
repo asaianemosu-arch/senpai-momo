@@ -12,13 +12,22 @@ export function StepIcon({ step, bundle, index }: { step: Step; bundle: Bundle; 
 }
 
 // The chef's photo of a whole bundle, on top of it.
-export function BundlePhoto({ photo, children }: { photo?: Photo; children?: ReactNode }) {
+export function BundlePhoto({
+  photo,
+  caption,
+  children,
+}: {
+  photo?: Photo
+  // In place of the caption line, e.g. to edit it.
+  caption?: ReactNode
+  children?: ReactNode
+}) {
   const url = usePhoto(photo?.id)
   if (!photo || !url) return null
   return (
     <figure className="bundle-photo">
       <img src={url} alt={photo.caption} />
-      {photo.caption && <figcaption>{photo.caption}</figcaption>}
+      {caption ?? (photo.caption && <figcaption>{photo.caption}</figcaption>)}
       {children}
     </figure>
   )
