@@ -44,6 +44,13 @@ export interface WriteResponse {
   asks: string[]
 }
 
+// 429: asked too often in a short while (or Claude is crowded); worth waiting a minute.
+export class RelayError extends Error {
+  constructor(readonly status: number) {
+    super(`relay ${status}`)
+  }
+}
+
 export async function askMomo(req: MomoRequest & { step: 'talk' }): Promise<TalkResponse>
 export async function askMomo(req: MomoRequest & { step: 'write' }): Promise<WriteResponse>
 export async function askMomo(req: MomoRequest): Promise<TalkResponse | WriteResponse> {
@@ -52,6 +59,6 @@ export async function askMomo(req: MomoRequest): Promise<TalkResponse | WriteRes
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(req),
   })
-  if (!res.ok) throw new Error(`relay ${res.status}`)
+  if (!res.ok) throw new RelayError(res.status)
   return res.json()
 }

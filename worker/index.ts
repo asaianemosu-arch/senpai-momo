@@ -14,7 +14,19 @@ interface Env {
   // Momo's voice (ElevenLabs). Both live only in the secrets, never in the repo.
   ELEVENLABS_API_KEY?: string
   MOMO_VOICE_ID?: string
+  // Asks per person per minute (wrangler.jsonc).
+  MOMO_LIMIT?: RateLimit
+  VOICE_LIMIT?: RateLimit
 }
+
+// One person is one connection; on the dev machine there is only one.
+async function allowed(limit: RateLimit | undefined, request: Request): Promise<boolean> {
+  if (!limit) return true
+  const { success } = await limit.limit({ key: request.headers.get('cf-connecting-ip') ?? 'local' })
+  return success
+}
+
+const BUSY = () => Response.json({ error: 'busy' }, { status: 429 })
 
 const MODEL = 'claude-opus-5-5'
 const SYSTEM = `${MOMO_CORE}\n\n${BAKERY_KNOWLEDGE}`
@@ -328,10 +340,13 @@ async function voice(request: Request, env: Env): Promise<Response> {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
-    if (url.pathname === '/api/voice' && request.method === 'POST') return voice(request, env)
+    if (url.pathname === '/api/voice' && request.method === 'POST') {
+      return (await allowed(env.VOICE_LIMIT, request)) ? voice(request, env) : BUSY()
+    }
     if (url.pathname !== '/api/momo' || request.method !== 'POST') {
       return new Response('Not found', { status: 404 })
     }
+    if (!(await allowed(env.MOMO_LIMIT, request))) return BUSY()
     if (!env.ANTHROPIC_API_KEY) {
       return Response.json({ error: 'not_configured' }, { status: 503 })
     }
@@ -343,7 +358,7 @@ export default {
       return Response.json(await momo(body, env.ANTHROPIC_API_KEY))
     } catch (error) {
       if (error instanceof Anthropic.RateLimitError) {
-        return Response.json({ error: 'busy' }, { status: 429 })
+        return BUSY()
       }
       if (error instanceof Anthropic.APIError) {
         console.error('Claude API error', error.status, error.message)

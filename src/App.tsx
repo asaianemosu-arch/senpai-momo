@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Bundle, Focus, HygieneDay, HygieneTime, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
-import { askMomo } from './core/api'
+import { RelayError, askMomo } from './core/api'
 import type { Handed } from './core/files'
 import { Shelf } from './core/Shelf'
 import { Chat } from './core/Chat'
@@ -38,6 +38,7 @@ const DAYTIME = 'service'
 const RECENT = 40
 
 const SORRY = 'ごめんなさい、いまお返事ができませんでした。少しして、もう一度送ってもらえますか？'
+const BREATHE = 'たくさんお話ししてくれて、ありがとうございます！ 少しだけ息つぎさせてください。1分ほどしたら、もう一度送ってもらえますか？'
 
 function today() {
   const d = new Date()
@@ -210,8 +211,8 @@ export function App() {
           if (!narrow) setOpenId(res.show.section)
         }
       }
-    } catch {
-      setMessages([...log, { from: 'momo', text: SORRY }])
+    } catch (e) {
+      setMessages([...log, { from: 'momo', text: e instanceof RelayError && e.status === 429 ? BREATHE : SORRY }])
       return
     } finally {
       setWaiting(false)

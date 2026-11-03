@@ -4,6 +4,12 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-26",
   "compatibility_flags": ["nodejs_compat"],
+  // How often one person (one connection) may ask, so the shared keys last
+  // through judging. One message to Momo from the chef is two asks (reply, paper).
+  "ratelimits": [
+    { "name": "MOMO_LIMIT", "namespace_id": "1001", "simple": { "limit": 12, "period": 60 } },
+    { "name": "VOICE_LIMIT", "namespace_id": "1002", "simple": { "limit": 10, "period": 60 } }
+  ],
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
