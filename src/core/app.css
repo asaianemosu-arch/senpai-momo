@@ -532,8 +532,8 @@ details.hist summary { cursor: pointer; }
 .fact-in { align-items: flex-start; }
 .fact-in textarea { font-size: 16px; resize: vertical; color: var(--ink); background: var(--pane); }
 .fact-in input { font-size: 16px; }
-details.bundle > summary { flex-wrap: wrap; }
-details.bundle > summary .grow { min-width: 8em; }
+.narrow details.bundle > summary { flex-wrap: wrap; }
+.narrow details.bundle > summary .grow { min-width: 8em; }
 
 /* who was speaking on the teaching side */
 .who-col { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: none; }
