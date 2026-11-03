@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Bundle, Focus, HygieneDay, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
+import type { Bundle, Focus, HygieneDay, HygieneTime, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
 import type { Handed } from './core/files'
@@ -12,7 +12,7 @@ import { Timetable } from './core/Timetable'
 import { Splash } from './core/Splash'
 import { Review, changesSince } from './core/Review'
 import { useNarrow } from './core/useNarrow'
-import { EMPTY_DAY, HygieneRecorder, HygieneSheet, dayKey } from './core/Hygiene'
+import { EMPTY_DAY, HygieneRecorder, HygieneSheet, dayKey, roundDone } from './core/Hygiene'
 import momoUrl from '../assets/momo/01.png'
 import { bakery as trade } from './trades/bakery'
 
@@ -98,6 +98,10 @@ export function App() {
   ])
   // The daily hygiene record, day by day ("2026-11-04").
   const [hygiene, setHygiene] = usePersistent<Record<string, HygieneDay>>('hygiene', {})
+  // ☑️ What staff ticked off today, by part. Only today is kept.
+  // The hygiene round a checklist sent staff to record.
+  const [round, setRound] = useState<HygieneTime | undefined>(undefined)
+  const [checks, setChecks] = usePersistent<{ date: string; done: Record<string, string[]> }>('checks', { date: '', done: {} })
   const [staffLog, setStaffLog] = usePersistent<Message[]>('log:staff', [
     { from: 'momo', text: trade.greetings.staff },
   ])
@@ -305,6 +309,7 @@ export function App() {
       openId={item.id}
       onOpen={(id) => {
         setOpenId(id)
+        setRound(undefined)
         if (narrow) {
           setShelfOpen(false)
           // Staff record hygiene in the middle; the sheet opens from there.
@@ -345,9 +350,12 @@ export function App() {
 
   const dateKey = dayKey()
   const day = hygiene[dateKey] ?? EMPTY_DAY
+  const ticked = checks.date === dateKey ? checks.done : {}
   const recording = role === 'staff' && !!item.record
   const center = recording ? (
     <HygieneRecorder
+      key={round}
+      start={round}
       form={trade.hygiene}
       day={day}
       onChange={(next) => setHygiene((all) => ({ ...all, [dateKey]: next }))}
@@ -370,12 +378,34 @@ export function App() {
     />
   ) : role === 'staff' ? (
     <StaffPaper
+      key={item.id}
       item={item}
       paper={published[item.id]}
       focus={focus}
       titleOf={titleOf}
       onOpen={setOpenId}
       onClose={narrow ? () => setPaperOpen(false) : undefined}
+      checks={
+        item.checklist && {
+          done: ticked[item.id] ?? [],
+          onToggle: (title) =>
+            setChecks((all) => {
+              const done = all.date === dateKey ? all.done : {}
+              const mine = done[item.id] ?? []
+              return {
+                date: dateKey,
+                done: { ...done, [item.id]: mine.includes(title) ? mine.filter((t) => t !== title) : [...mine, title] },
+              }
+            }),
+          recordDone: roundDone(trade.hygiene, day, item.checklist.record),
+          onRecord: () => {
+            const record = trade.shelf.find((s) => s.record)
+            setRound(item.checklist!.record)
+            if (record) setOpenId(record.id)
+            if (narrow) setPaperOpen(false)
+          },
+        }
+      }
     />
   ) : (
     <PaperView

@@ -15,6 +15,9 @@ export interface ShelfItem {
   list?: { title: string; label: string; text: string }
   // The daily hygiene record: staff record it here with Momo.
   record?: boolean
+  // Staff can tick the part's work off for the day; the hygiene round of
+  // that time sits among it, and Momo says "done" when all is ticked.
+  checklist?: { record: HygieneTime; done: string }
   children?: ShelfItem[]
 }
 

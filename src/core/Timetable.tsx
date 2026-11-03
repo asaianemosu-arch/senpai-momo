@@ -29,7 +29,7 @@ function keyOf(section: ShelfItem, bundle: Bundle, order: string[]): number {
 // The day's timetable: not a place to file work, a map of the day built
 // from the times the chef mentioned in the other parts.
 // Today in the shop's week (月 first).
-function today(): Weekday {
+export function today(): Weekday {
   return WEEKDAYS[(new Date().getDay() + 6) % 7]
 }
 

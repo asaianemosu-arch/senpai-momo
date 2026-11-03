@@ -32,6 +32,15 @@ function timeNow(): HygieneTime {
 const items = (form: HygieneForm) => form.groups.flatMap((g) => g.items)
 const keyOf = (item: HygieneItem, time: HygieneTime) => `${item.id}@${time}`
 
+// Whether every question of that round has an answer today.
+export function roundDone(form: HygieneForm, day: HygieneDay, time: HygieneTime): boolean {
+  return items(form)
+    .filter((i) => i.when.includes(time))
+    .every((i) => day.answers[keyOf(i, time)])
+}
+
+export const roundLabel = (time: HygieneTime) => TIMES.find((t) => t.time === time)!.label
+
 function tempsLine(a: HygieneAnswer | undefined, item: HygieneItem): string {
   if (!a?.temps || !item.temps) return ''
   return item.temps
@@ -45,10 +54,12 @@ interface RecorderProps {
   day: HygieneDay
   onChange: (day: HygieneDay) => void
   onShowSheet?: () => void
+  // The round to open on (from a checklist); otherwise the one the hour fits.
+  start?: HygieneTime
 }
 
-export function HygieneRecorder({ form, day, onChange, onShowSheet }: RecorderProps) {
-  const [time, setTime] = useState<HygieneTime>(timeNow)
+export function HygieneRecorder({ form, day, onChange, onShowSheet, start }: RecorderProps) {
+  const [time, setTime] = useState<HygieneTime>(() => start ?? timeNow())
   const [digits, setDigits] = useState('')
   const [temps, setTemps] = useState<Record<string, number>>({})
   // The answer waiting for "どうしましたか？" before it is kept.

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Focus, PaperBody, ShelfItem } from './types'
 import { BundlePhoto, StepIcon } from './ShowCard'
 import { Facts, Recipe } from './Timetable'
+import { Checklist } from './Checklist'
 
 interface Props {
   item: ShelfItem
@@ -11,20 +12,44 @@ interface Props {
   titleOf: (id: string) => string
   onOpen: (id: string) => void
   onClose?: () => void
+  // Parts staff tick off for the day (オープン前・クローズ).
+  checks?: {
+    done: string[]
+    onToggle: (title: string) => void
+    recordDone: boolean
+    onRecord: () => void
+  }
 }
 
 // What staff see: the paper stays folded. Only what they ask about opens.
-export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Props) {
+export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose, checks }: Props) {
   const [opened, setOpened] = useState<string[]>([])
   const here = focus && focus.section === item.id ? focus : null
   const empty = !paper || (paper.rules.length === 0 && paper.bundles.length === 0)
+  // ☑️ first where there is a list, unless Momo has just pointed into the paper.
+  const [ticking, setTicking] = useState(!here)
+  const [lookAt, setLookAt] = useState<string | null>(null)
+  const pageRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (here) setTicking(false)
+  }, [here])
+
+  // "見る ›" on the list: the paper opens at that bundle.
+  useEffect(() => {
+    if (!lookAt || ticking) return
+    pageRef.current?.querySelector(`[data-bundle="${CSS.escape(lookAt)}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    setLookAt(null)
+  }, [lookAt, ticking])
+
+  const listed = item.checklist && checks && !empty
 
   const toggle = (title: string) =>
     setOpened((all) => (all.includes(title) ? all.filter((t) => t !== title) : [...all, title]))
 
   return (
     <section className={onClose ? 'page sheet-page' : 'page'}>
-      <div className="paper staff-paper">
+      <div className="paper staff-paper" ref={pageRef}>
         <div className="paper-head">
           <h2>
             {item.icon} {item.title}
@@ -36,8 +61,30 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
           )}
         </div>
 
+        {listed && (
+          <div className="hy-switch ck-switch" role="tablist">
+            <button type="button" role="tab" aria-selected={!ticking} className={ticking ? '' : 'on'} onClick={() => setTicking(false)}>
+              📖 読む
+            </button>
+            <button type="button" role="tab" aria-selected={ticking} className={ticking ? 'on' : ''} onClick={() => setTicking(true)}>
+              ☑️ チェック
+            </button>
+          </div>
+        )}
+
         {empty ? (
           <p className="blank">まだ配られていません。</p>
+        ) : listed && ticking ? (
+          <Checklist
+            item={{ ...item, checklist: item.checklist! }}
+            paper={paper}
+            {...checks}
+            onLook={(title) => {
+              setOpened((all) => (all.includes(title) ? all : [...all, title]))
+              setTicking(false)
+              setLookAt(title)
+            }}
+          />
         ) : (
           <>
             {paper.rules.map((r, i) => (
@@ -49,7 +96,7 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
               const lit = here?.bundle === b.title ? here.steps : []
               const open = here?.bundle === b.title || opened.includes(b.title)
               return (
-                <div key={b.title} className={open ? 'fold open' : 'fold'}>
+                <div key={b.title} data-bundle={b.title} className={open ? 'fold open' : 'fold'}>
                   <button type="button" className="fold-top" onClick={() => toggle(b.title)}>
                     <span className="illust peach">{b.icon}</span>
                     <span className="grow">

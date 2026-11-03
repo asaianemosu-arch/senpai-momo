@@ -10,11 +10,21 @@ export const bakery: Trade = {
     // Not a place to file work: the day's timetable, built from the times
     // the chef mentions in the other parts.
     { id: 'day', icon: '🕐', title: '1日の流れ', note: '時間割', timetable: true },
-    { id: 'open', icon: '☀️', title: 'オープン前' },
+    {
+      id: 'open',
+      icon: '☀️',
+      title: 'オープン前',
+      checklist: { record: 'morning', done: 'オープンの準備、ぜんぶできましたね！ きょうもいい1日になりますように (๑˃̵ᴗ˂̵)' },
+    },
     { id: 'service', icon: '🛎️', title: '営業中', note: '段取り・包む・お知らせ・お客さん' },
     { id: 'recipe', icon: '📖', title: 'レシピ', note: 'パンごとの作り方', untimed: true, list: { title: '配合', label: '材料', text: '分量' } },
     { id: 'clean', icon: '🧹', title: '清掃', note: '場所・道具ごとのやり方', untimed: true, list: { title: '要点', label: '見出し', text: '中身' } },
-    { id: 'close', icon: '🌙', title: 'クローズ' },
+    {
+      id: 'close',
+      icon: '🌙',
+      title: 'クローズ',
+      checklist: { record: 'close', done: 'クローズ、ぜんぶできましたね！ きょうもおつかれさまでした。気をつけて帰ってくださいね (๑˃̵ᴗ˂̵)' },
+    },
     { id: 'hygiene', icon: '🌡️', title: '衛生の記録', note: '冷蔵庫・冷凍庫の温度など', record: true },
   ],
   hygiene: BAKERY_HYGIENE,

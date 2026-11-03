@@ -629,3 +629,25 @@ details.bundle.fix { background: #f6f9fd; border-color: #b9d2ec; }
 .mark.new { background: #ffd36b; color: #6b4a00; }
 .mark.fix { background: #e6f0fb; color: #2d5a8a; }
 .filed .place { border: none; background: none; padding: 0; font: inherit; color: inherit; text-decoration: underline dotted; cursor: pointer; }
+
+/* ---------- staff: ☑️ today's checklist (オープン前・クローズ) ---------- */
+.ck-switch { margin-bottom: 12px; flex: none; }
+.ck-count { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--mute); font-size: 13px; }
+.ck-meter { flex: 1; height: 8px; background: var(--line); border-radius: 99px; overflow: hidden; }
+.ck-meter i { display: block; height: 100%; background: #3f8f5a; transition: width .3s; }
+.ck-row { display: flex; align-items: center; gap: 10px; background: var(--pane); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; transition: background .3s; }
+.ck-row .grow { flex: 1; min-width: 0; cursor: pointer; }
+.ck-row b { font-weight: 700; }
+.ck-row small { display: block; color: var(--mute); font-size: 12px; line-height: 1.4; }
+.ck-row.done { background: #e4f3e8; border-color: #c5e3cf; }
+.ck-row.done b { color: var(--mute); text-decoration: line-through; text-decoration-color: #9fcfae; }
+.ck-box { width: 32px; height: 32px; flex: none; border: 2px solid var(--line); border-radius: 9px; background: var(--pane); display: grid; place-items: center; font-size: 18px; color: #fff; padding: 0; }
+.ck-row.done .ck-box { background: #3f8f5a; border-color: #3f8f5a; }
+.ck-row.rec .ck-box { border-style: dashed; }
+.ck-row.rec .grow { cursor: default; }
+.ck-row .time-chip { flex: none; }
+.ck-look { flex: none; border: none; background: none; color: var(--accent); font: inherit; font-size: 13px; padding: 4px; white-space: nowrap; }
+.ck-momo { display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; }
+.ck-momo img { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; object-position: top; background: var(--accent-soft); flex: none; }
+.ck-momo .bubble { background: var(--side); border-radius: 4px 16px 16px 16px; padding: 8px 12px; }
+.ck-reset { color: var(--mute); font-size: 12px; text-align: center; margin-top: 14px; }
