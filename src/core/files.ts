@@ -19,7 +19,7 @@ const PHOTO_EDGE = 1568
 const THUMB_EDGE = 360
 
 export const ACCEPT = [
-  '.txt', '.csv', '.tsv', '.md',
+  '.txt', '.csv', '.tsv', '.md', '.rtf',
   '.docx', '.xlsx', '.xls', '.xlsm', '.ods',
   '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.heic', '.heif',
 ].join(',')
@@ -39,6 +39,9 @@ export async function readFile(file: File): Promise<Handed> {
   const name = file.name
   if (['txt', 'csv', 'tsv', 'md'].includes(ext) || file.type.startsWith('text/')) {
     return { attach: { kind: 'file', name, text: clip(decode(await file.arrayBuffer())) } }
+  }
+  if (ext === 'rtf') {
+    return { attach: { kind: 'file', name, text: clip(rtfText(await file.arrayBuffer())) } }
   }
   if (ext === 'docx') {
     const mammoth = await import('mammoth')
@@ -80,6 +83,111 @@ function decode(buf: ArrayBuffer): string {
   } catch {
     return new TextDecoder('shift_jis').decode(buf)
   }
+}
+
+// The words of an RTF file (TextEdit, older Word). Japanese comes either as
+// \uNNNN or as bytes \'hh in the file's code page (932 is Shift_JIS).
+function rtfText(buf: ArrayBuffer): string {
+  const src = new TextDecoder('latin1').decode(buf)
+  const page = src.match(/\\ansicpg(\d+)/)?.[1]
+  const decoder = new TextDecoder(page === '932' ? 'shift_jis' : page ? `windows-${page}` : 'windows-1252')
+  // Groups that hold no words: fonts, colours, styles, pictures, document info.
+  const SKIP = /^(fonttbl|colortbl|stylesheet|info|pict|header|footer|listtable|listoverridetable|expandedcolortbl|generator)$/
+  let out = ''
+  let bytes: number[] = []
+  const flush = () => {
+    if (bytes.length) out += decoder.decode(new Uint8Array(bytes))
+    bytes = []
+  }
+  const stack: { skip: boolean; uc: number }[] = []
+  let skip = false
+  let uc = 1
+  let pendingSkip = 0
+  let i = 0
+  while (i < src.length) {
+    const c = src[i]
+    if (c === '{') {
+      stack.push({ skip, uc })
+      i++
+      continue
+    }
+    if (c === '}') {
+      flush()
+      const top = stack.pop()
+      if (top) ({ skip, uc } = top)
+      i++
+      continue
+    }
+    if (c === '\\') {
+      const next = src[i + 1]
+      if (next === "'") {
+        const b = parseInt(src.slice(i + 2, i + 4), 16)
+        i += 4
+        if (pendingSkip > 0) pendingSkip--
+        else if (!skip) bytes.push(b)
+        continue
+      }
+      if (next === '*') {
+        skip = true
+        i += 2
+        continue
+      }
+      // TextEdit ends a line with a backslash before the line break.
+      if (next === '\n' || next === '\r') {
+        if (!skip) {
+          flush()
+          out += '\n'
+        }
+        i += 2
+        continue
+      }
+      if (next === '\\' || next === '{' || next === '}') {
+        if (!skip) {
+          flush()
+          out += next
+        }
+        i += 2
+        continue
+      }
+      const m = /^([a-zA-Z]+)(-?\d+)? ?/.exec(src.slice(i + 1, i + 40))
+      if (!m) {
+        i += 2
+        continue
+      }
+      i += 1 + m[0].length
+      const word = m[1]
+      const arg = m[2] === undefined ? undefined : Number(m[2])
+      if (SKIP.test(word)) skip = true
+      else if (word === 'uc' && arg !== undefined) uc = arg
+      else if (word === 'u' && arg !== undefined) {
+        if (!skip) {
+          flush()
+          out += String.fromCharCode(arg < 0 ? arg + 65536 : arg)
+        }
+        pendingSkip = uc
+      } else if (!skip && (word === 'par' || word === 'line')) {
+        flush()
+        out += '\n'
+      } else if (!skip && word === 'tab') {
+        flush()
+        out += '\t'
+      }
+      continue
+    }
+    if (c === '\r' || c === '\n') {
+      i++
+      continue
+    }
+    if (pendingSkip > 0) {
+      pendingSkip--
+    } else if (!skip) {
+      flush()
+      out += c
+    }
+    i++
+  }
+  flush()
+  return out
 }
 
 // Each sheet as a table of lines, named, so Momo sees what belongs where.
