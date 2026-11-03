@@ -425,6 +425,7 @@ export function App() {
       onOpen={setOpenId}
       onClose={narrow ? () => setPaperOpen(false) : undefined}
       fresh={role === 'chef' ? fresh[item.id] : undefined}
+      busy={role === 'chef' && writingCount > 0}
     />
   )
 

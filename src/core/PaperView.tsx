@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WEEKDAYS, type Bundle, type Paper, type PaperBody, type Role, type ShelfItem, type Weekday } from './types'
 import { Facts, Recipe } from './Timetable'
 import { BundlePhoto, StepPhoto } from './ShowCard'
@@ -18,6 +18,9 @@ interface Props {
   onClose?: () => void
   // Bundles Momo just wrote or fixed, tagged until the chef has looked.
   fresh?: Record<string, 'new' | 'fix'>
+  // Momo is writing: what she writes replaces the part's paper, so a fix
+  // started now would be lost. ✏️ waits until she is done.
+  busy?: boolean
 }
 
 // The chef fixes the paper one part at a time: the ✏️ beside a part opens
@@ -108,6 +111,17 @@ export function PaperView(props: Props) {
     setOpen(next)
   }
 
+  // The part just opened: the cursor goes to its first field, so it is
+  // clear where to type (it opens below the ✏️, not in its place).
+  const root = useRef<HTMLElement>(null)
+  const openKey = open ? ('rules' in open ? 'rules' : `${open.b}-${open.part}`) : ''
+  useEffect(() => {
+    if (!openKey) return
+    const field = root.current?.querySelector<HTMLInputElement | HTMLTextAreaElement>('.editing input, .editing textarea')
+    field?.focus({ preventScroll: true })
+    field?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [openKey])
+
   const isOpen = (b: number, part: Part) => !!open && 'b' in open && open.b === b && open.part === part
   const work = open && 'work' in open ? open.work : null
   const setWork = (w: Bundle) => setOpen((o) => (o && 'work' in o ? { ...o, work: w } : o))
@@ -118,6 +132,7 @@ export function PaperView(props: Props) {
     return (
       <button
         type="button"
+        disabled={props.busy && !on}
         className={on ? 'pen on' : 'pen'}
         aria-label={on ? 'できた' : '直す'}
         onClick={(e) => {
@@ -176,7 +191,7 @@ export function PaperView(props: Props) {
   const rulesEdit = open && 'rules' in open ? open.rules : null
 
   return (
-    <section className={props.onClose ? 'page sheet-page' : 'page'}>
+    <section ref={root} className={props.onClose ? 'page sheet-page' : 'page'}>
       <div className="paper">
         <div className="paper-head">
           <h2>
@@ -191,6 +206,7 @@ export function PaperView(props: Props) {
           )}
         </div>
 
+        {canEdit && props.busy && !empty && <p className="pen-wait">📝 モモが書き終わったら、✏️ で直せます</p>}
         {photoNote && <p className="hand-note">{photoNote}</p>}
         <input
           ref={picker}
@@ -239,7 +255,13 @@ export function PaperView(props: Props) {
                     <b>大切なこと</b>　{r}
                   </span>
                   {canEdit && i === 0 && (
-                    <button type="button" className="pen" aria-label="直す" onClick={() => start({ rules: [...body.rules] })}>
+                    <button
+                      type="button"
+                      className="pen"
+                      aria-label="直す"
+                      disabled={props.busy}
+                      onClick={() => start({ rules: [...body.rules] })}
+                    >
                       ✏️
                     </button>
                   )}
