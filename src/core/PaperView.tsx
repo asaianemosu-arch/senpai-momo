@@ -255,9 +255,12 @@ export function PaperView(props: Props) {
                     <span className="grow">{b.title}</span>
                     {b.time && <span className="time-chip">🕐 {b.time}</span>}
                     {!!b.days?.length && <span className="week">{b.days.join('・')}</span>}
-                    {pen(bi, 'head')}
-                    {b.steps.length > 0 && <span className="count">{b.steps.length}つ</span>}
-                    <span className="chev">▸</span>
+                    {/* Kept together so a wrap never leaves the arrow alone on a line. */}
+                    <span className="head-tail">
+                      {pen(bi, 'head')}
+                      {b.steps.length > 0 && <span className="count">{b.steps.length}つ</span>}
+                      <span className="chev">▸</span>
+                    </span>
                   </summary>
                   <div className="body">
                     {isOpen(bi, 'head') && (
