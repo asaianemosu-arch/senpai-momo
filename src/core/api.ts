@@ -14,7 +14,13 @@ export interface MomoRequest {
   manual: Record<string, PaperBody>
   asks: string[]
   messages: Message[]
+  // A photo or PDF handed over with the last message, for Momo to read once.
+  media?: Media
 }
+
+export type Media =
+  | { type: 'image'; mediaType: 'image/jpeg' | 'image/png'; data: string }
+  | { type: 'pdf'; data: string }
 
 export interface PaperUpdate extends PaperBody {
   section: string
@@ -26,6 +32,8 @@ export interface TalkResponse {
   asks: string[]
   // Staff only: where in the manual Momo points while answering.
   show?: Focus
+  // What Momo read in a photo or PDF handed over this turn.
+  read?: string
 }
 
 export interface WriteResponse {

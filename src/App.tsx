@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Focus, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
+import type { Handed } from './core/files'
 import { Shelf } from './core/Shelf'
 import { Chat } from './core/Chat'
 import { PaperView } from './core/PaperView'
@@ -125,14 +126,26 @@ export function App() {
     })
   }
 
-  async function send(text: string) {
-    const log: Message[] = [...messages, { from: role, text }]
+  async function send(text: string, handed?: Handed) {
+    let log: Message[] = [...messages, handed ? { from: role, text, attach: handed.attach } : { from: role, text }]
     const ask = { role, localTime: now(), openSection: item.id }
     setMessages(log)
     setWaiting(true)
     let after: Message[]
     try {
-      const res = await askMomo({ ...ask, step: 'talk', manual: shown, asks, messages: log.slice(-RECENT) })
+      const res = await askMomo({
+        ...ask,
+        step: 'talk',
+        manual: shown,
+        asks,
+        messages: log.slice(-RECENT),
+        media: handed?.media,
+      })
+      // A photo or PDF is kept as the words Momo read in it.
+      if (handed?.media && res.read) {
+        const attach = { ...handed.attach, text: res.read }
+        log = log.map((m, i) => (i === log.length - 1 ? { ...m, attach } : m))
+      }
       after = [...log, { from: 'momo', text: res.reply, show: res.show }]
       setMessages(after)
       if (role === 'staff') {

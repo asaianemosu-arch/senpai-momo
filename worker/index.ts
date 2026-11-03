@@ -7,7 +7,7 @@ import { MOMO_CORE } from '../src/core/momo-prompt'
 import { BAKERY_KNOWLEDGE } from '../src/trades/bakery/prompt'
 import { bakery } from '../src/trades/bakery'
 import type { MomoRequest, TalkResponse, WriteResponse } from '../src/core/api'
-import { WEEKDAYS, type Focus } from '../src/core/types'
+import { WEEKDAYS, type Attachment, type Focus } from '../src/core/types'
 
 interface Env {
   ANTHROPIC_API_KEY?: string
@@ -21,6 +21,10 @@ const SYSTEM = `${MOMO_CORE}\n\n${BAKERY_KNOWLEDGE}`
 
 const MAX_MESSAGES = 80
 const MAX_TEXT = 4000
+// Words of a memo or file the chef handed over.
+const MAX_HANDED = 30_000
+// A photo or PDF, as base64 (about 10MB of file).
+const MAX_MEDIA = 14_000_000
 const MAX_MANUAL = 100_000
 const MAX_ASKS = 8
 const FROM_STAFF = '【スタッフから】'
@@ -35,6 +39,7 @@ const SECTION_LIST = bakery.shelf
 
 const Talk = z.object({
   reply: z.string(),
+  read: z.string(),
   asks: z.array(z.string()),
   show: z.object({
     section: z.enum([...FILED, 'none']),
@@ -89,13 +94,24 @@ function isValid(body: unknown): body is MomoRequest {
     Array.isArray(b.messages) &&
     b.messages.length > 0 &&
     b.messages.length <= MAX_MESSAGES &&
-    b.messages.every((m) => typeof m.text === 'string' && m.text.length <= MAX_TEXT) &&
+    b.messages.every(
+      (m) =>
+        typeof m.text === 'string' &&
+        m.text.length <= MAX_TEXT &&
+        (m.attach === undefined || (typeof m.attach?.text === 'string' && m.attach.text.length <= MAX_HANDED)),
+    ) &&
+    (b.media === undefined || isMedia(b.media)) &&
     Array.isArray(b.asks) &&
     !!b.manual &&
     typeof b.manual === 'object' &&
     Object.values(b.manual).every((p) => Array.isArray(p?.rules) && Array.isArray(p?.bundles)) &&
     JSON.stringify(b.manual).length <= MAX_MANUAL
   )
+}
+
+function isMedia(m: MomoRequest['media']): boolean {
+  if (!m || typeof m.data !== 'string' || m.data.length > MAX_MEDIA) return false
+  return m.type === 'pdf' || (m.type === 'image' && (m.mediaType === 'image/jpeg' || m.mediaType === 'image/png'))
 }
 
 // Momo's last reply, if she has replied to anyone yet (the greeting on screen
@@ -121,13 +137,36 @@ function context(req: MomoRequest): string[] {
   ]
 }
 
+const HANDED: Record<Attachment['kind'], string> = {
+  memo: '📋 貼ったメモ',
+  file: '📄 ファイル',
+  photo: '📷 写真',
+}
+
+// What the chef handed over, as words: the memo itself, or what Momo read.
+function handed(a: Attachment): string {
+  const head = `【シェフが渡したもの：${HANDED[a.kind]}${a.name ? `「${a.name}」` : ''}】`
+  return a.text ? `${head}\n${a.text}\n【ここまで】` : head
+}
+
 function conversation(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
   const messages: Anthropic.Beta.BetaMessageParam[] = []
-  for (const m of req.messages) {
+  const last = req.messages.length - 1
+  req.messages.forEach((m, i) => {
     // Momo's greeting comes first on screen; the API needs a user turn first.
-    if (messages.length === 0 && m.from === 'momo') continue
-    messages.push({ role: m.from === 'momo' ? 'assistant' : 'user', content: m.text })
-  }
+    if (messages.length === 0 && m.from === 'momo') return
+    if (m.from === 'momo') return messages.push({ role: 'assistant', content: m.text })
+    const words = [m.attach && handed(m.attach), m.text].filter(Boolean).join('\n')
+    // A photo or PDF goes with the turn it was handed over in, once.
+    if (i === last && req.media) {
+      const media: Anthropic.Beta.BetaContentBlockParam =
+        req.media.type === 'pdf'
+          ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: req.media.data } }
+          : { type: 'image', source: { type: 'base64', media_type: req.media.mediaType, data: req.media.data } }
+      return messages.push({ role: 'user', content: [media, { type: 'text', text: words }] })
+    }
+    messages.push({ role: 'user', content: words })
+  })
   return messages
 }
 
@@ -139,12 +178,18 @@ async function talk(client: Anthropic, req: MomoRequest): Promise<TalkResponse> 
     ...context(req),
     '今回は返事だけをします。紙はこのあと別に書くので、どこに書いたかは言いません。',
   ]
+  if (req.media) {
+    notes.push(
+      'シェフが写真か PDF を渡しました。read に、そこに書いてある文字をそのまま書き起こします（並びも、略語も、そのまま。読めないところは〔?〕）。文字がない写真なら、写っているものを短く書きます。',
+    )
+  }
   if (req.role === 'chef' && askedLastTime(req)) {
     notes.push('前の返事で問いかけたので、今回は問いかけず、受け止めて返すだけにします。「？」もお願いも入れない。')
   }
   const response = await client.beta.messages.parse({
     model: MODEL,
-    max_tokens: 4000,
+    // Reading a photo or PDF writes it all down, so it needs more room.
+    max_tokens: req.media ? 16000 : 4000,
     betas: ['server-side-fallback-2026-07-01'],
     fallbacks: 'default',
     output_config: { effort: 'low', format: betaZodOutputFormat(Talk) },
@@ -163,7 +208,7 @@ async function talk(client: Anthropic, req: MomoRequest): Promise<TalkResponse> 
       show: pointTo(req, turn.show),
     }
   }
-  return { reply: turn.reply, asks: req.asks }
+  return { reply: turn.reply, asks: req.asks, read: req.media ? turn.read.slice(0, MAX_HANDED) : undefined }
 }
 
 // Keep only a pointer to steps that really exist in the manual the staff see.

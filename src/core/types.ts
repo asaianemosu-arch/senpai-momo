@@ -66,6 +66,8 @@ export type Manual = Record<string, Paper>
 export interface Message {
   from: 'momo' | Role
   text: string
+  // Something the chef handed over: a memo, a file, a photo.
+  attach?: Attachment
   // Where Momo put what she heard, shown under her reply.
   filed?: string
   // The first part of the shelf she wrote to, opened by "紙を見る".
@@ -85,4 +87,15 @@ export interface Trade {
   shopName: string
   shelf: ShelfItem[]
   greetings: Record<Role, string>
+}
+
+// What the chef hands Momo with 📋 貼る or ✍️ 手書きを読む. The file itself is
+// not kept; only its words are, so the conversation stays light.
+export interface Attachment {
+  kind: 'memo' | 'file' | 'photo'
+  name?: string
+  // A small picture of a photo, shown in the conversation.
+  thumb?: string
+  // The words in it: taken out on the screen, or as Momo read them.
+  text: string
 }
