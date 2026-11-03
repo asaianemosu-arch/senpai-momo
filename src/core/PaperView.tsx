@@ -93,7 +93,7 @@ export function PaperView(props: Props) {
       props.onChange({ ...body, rules }, 'シェフが直しました（大切なこと）')
     } else {
       const bundles = body.bundles.map((x, i) => (i === open.b ? tidy(open.work) : x))
-      const what = open.part === 'facts' && item.untimed ? '配合' : WHAT[open.part]
+      const what = open.part === 'facts' && item.list ? item.list.title : WHAT[open.part]
       props.onChange({ ...body, bundles }, `シェフが直しました（${open.work.title}の${what}）`)
     }
     setOpen(null)
@@ -330,20 +330,20 @@ export function PaperView(props: Props) {
                     {isOpen(bi, 'facts') ? (
                       <div className="recipe-list editing">
                         <div className="recipe-head">
-                          <span>{item.untimed ? '配合' : '札'}</span>
+                          <span>{item.list?.title ?? '札'}</span>
                           {pen(bi, 'facts')}
                         </div>
                         {facts.map((f, i) => (
                           <div key={i} className="erow">
                             <div className="fact-in">
                               <input
-                                placeholder={item.untimed ? '材料' : '見出し'}
+                                placeholder={item.list?.label ?? '見出し'}
                                 value={f.label}
                                 onChange={(e) => setWork({ ...b, facts: put(facts, i, { ...f, label: e.target.value }) })}
                               />
                               <textarea
                                 rows={Math.min(4, Math.ceil(f.text.length / 11) || 1)}
-                                placeholder={item.untimed ? '分量' : '中身'}
+                                placeholder={item.list?.text ?? '中身'}
                                 value={f.text}
                                 onChange={(e) => setWork({ ...b, facts: put(facts, i, { ...f, text: e.target.value }) })}
                               />
@@ -360,11 +360,11 @@ export function PaperView(props: Props) {
                           className="add"
                           onClick={() => setWork({ ...b, facts: [...facts, { label: '', text: '' }] })}
                         >
-                          {item.untimed ? '＋ 材料を足す' : '＋ 札を足す'}
+                          {`＋ ${item.list?.label ?? '札'}を足す`}
                         </button>
                       </div>
-                    ) : item.untimed ? (
-                      (facts.length > 0 || canEdit) && <Recipe facts={facts} pen={pen(bi, 'facts')} />
+                    ) : item.list ? (
+                      (facts.length > 0 || canEdit) && <Recipe facts={facts} title={item.list.title} pen={pen(bi, 'facts')} />
                     ) : (
                       facts.length > 0 && (
                         <div className="with-pen">

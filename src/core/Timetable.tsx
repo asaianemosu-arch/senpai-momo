@@ -158,12 +158,20 @@ function splitNote(text: string): [string, string] {
   return m ? [m[1], m[2]] : [text, '']
 }
 
-// A recipe's 配合: one material a line, the amount right after it.
-export function Recipe({ facts, pen }: { facts: { label: string; text: string }[]; pen?: ReactNode }) {
+// One fact a line under a heading (a recipe's 配合: material, then amount).
+export function Recipe({
+  facts,
+  title,
+  pen,
+}: {
+  facts: { label: string; text: string }[]
+  title: string
+  pen?: ReactNode
+}) {
   return (
     <div className="recipe-list">
       <div className="recipe-head">
-        <span>配合</span>
+        <span>{title}</span>
         {pen}
       </div>
       {facts.map((f, i) => {

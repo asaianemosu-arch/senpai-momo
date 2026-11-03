@@ -11,6 +11,8 @@ export interface ShelfItem {
   timetable?: boolean
   // How things are made, not when (recipes): left off the timetable.
   untimed?: boolean
+  // Facts shown one a line under a heading (レシピ: 配合 — 材料, 分量).
+  list?: { title: string; label: string; text: string }
   // The daily hygiene record: staff record it here with Momo.
   record?: boolean
   children?: ShelfItem[]
@@ -105,6 +107,8 @@ export interface Trade {
   shelf: ShelfItem[]
   greetings: Record<Role, string>
   hygiene: HygieneForm
+  // Parts that start with something on the paper (from an official guide).
+  seeds?: Record<string, PaperBody>
 }
 
 // The daily hygiene record, in the form a trade's official guide gives

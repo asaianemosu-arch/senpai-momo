@@ -105,7 +105,11 @@ export function Review({ pages, onFix, onPublish, onClose }: Props) {
                     {page.kind === 'removed' && <p className="lead">この束は、スタッフの紙から消えます。</p>}
                     <BundlePhoto photo={page.bundle.photo} />
                     {!!page.bundle.facts?.length &&
-                      (page.section.untimed ? <Recipe facts={page.bundle.facts} /> : <Facts facts={page.bundle.facts} />)}
+                      (page.section.list ? (
+                        <Recipe facts={page.bundle.facts} title={page.section.list.title} />
+                      ) : (
+                        <Facts facts={page.bundle.facts} />
+                      ))}
                     {page.bundle.note && <p className="from">{page.bundle.note}</p>}
                     <ol className="steps">
                       {page.bundle.steps.map((s, i) => (

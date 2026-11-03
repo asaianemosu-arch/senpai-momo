@@ -72,7 +72,7 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
                   {open && (
                     <div className="fold-body">
                       <BundlePhoto photo={b.photo} />
-                      {!!b.facts?.length && (item.untimed ? <Recipe facts={b.facts} /> : <Facts facts={b.facts} />)}
+                      {!!b.facts?.length && (item.list ? <Recipe facts={b.facts} title={item.list.title} /> : <Facts facts={b.facts} />)}
                       {b.note && <p className="from">{b.note}</p>}
                       {b.steps.map((s, i) => (
                         <div key={i} className={lit.includes(i + 1) ? 'ostep lit' : 'ostep'}>

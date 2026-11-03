@@ -96,6 +96,14 @@ export function App() {
     }
     setManual((all) => move<Paper>(all, { rules: [], bundles: [], history: [] }))
     setPublished((all) => move<PaperBody>(all, { rules: [], bundles: [] }))
+    // Parts that start from an official guide get their first paper once.
+    setManual((all) => {
+      const next = { ...all }
+      for (const [id, body] of Object.entries(trade.seeds ?? {})) {
+        if (!next[id]) next[id] = { ...body, history: [`${today()}　手引書の手順書例を入れました`] }
+      }
+      return next
+    })
   }, [])
 
   // Paper writing runs after the reply; it reads the newest manual from here.
