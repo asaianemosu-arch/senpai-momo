@@ -19,6 +19,9 @@ interface Props {
   cardFor?: (m: Message) => ReactNode
   // On a phone the paper is hidden; this opens it from the conversation.
   onShowPaper?: (sectionId?: string) => void
+  // The parts of the shelf, so 『クローズ』 in "where Momo wrote" opens it.
+  places?: { id: string; title: string }[]
+  onOpenPlace?: (id: string) => void
 }
 
 const HEADER: Record<Role, string> = {
@@ -44,7 +47,7 @@ const FACE: Record<Role, string> = {
   staff: '🙋',
 }
 
-export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShowPaper }: Props) {
+export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShowPaper, places, onOpenPlace }: Props) {
   const [draft, setDraft] = useState('')
   const [hint, setHint] = useState('')
   const [sheet, setSheet] = useState<'paste' | 'photo' | null>(null)
@@ -140,7 +143,7 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
             </div>
             {m.attach && <MomoRead attach={m.attach} />}
             {cardFor?.(m)}
-            {m.filed && <p className="filed">→ {m.filed}</p>}
+            {m.filed && <p className="filed">→ {linkPlaces(m.filed, places, onOpenPlace)}</p>}
             {m.filed && onShowPaper && (
               <button type="button" className="open-paper" onClick={() => onShowPaper(m.filedTo)}>
                 📄 紙を見る
@@ -241,4 +244,19 @@ function Speak({ text, onError }: { text: string; onError: (e: VoiceError) => vo
       {state === 'playing' ? '⏹' : '🔊'}
     </button>
   )
+}
+
+// 『クローズ』 and the like become buttons that open that part of the shelf.
+function linkPlaces(text: string, places?: { id: string; title: string }[], open?: (id: string) => void): ReactNode {
+  if (!places || !open) return text
+  return text.split(/(『[^』]+』)/).map((part, i) => {
+    const place = places.find((p) => part === `『${p.title}』`)
+    return place ? (
+      <button key={i} type="button" className="place" onClick={() => open(place.id)}>
+        {part}
+      </button>
+    ) : (
+      part
+    )
+  })
 }

@@ -6,11 +6,15 @@ interface Props {
   items: ShelfItem[]
   // What each part already holds (bundle names), shown under its title.
   contents: Record<string, string>
+  // How many bundles Momo just wrote or fixed in each part; those parts glow.
+  fresh?: Record<string, number>
+  // Bumped each time Momo writes, so the glow plays again.
+  pulse?: number
   openId: string
   onOpen: (id: string) => void
 }
 
-export function Shelf({ shopName, items, contents, openId, onOpen }: Props) {
+export function Shelf({ shopName, items, contents, fresh, pulse, openId, onOpen }: Props) {
   return (
     <section className="side">
       <div className="momo">
@@ -24,12 +28,12 @@ export function Shelf({ shopName, items, contents, openId, onOpen }: Props) {
       </div>
 
       <div className="shelf-title">お店のマニュアル</div>
-      <ShelfList items={items} contents={contents} openId={openId} onOpen={onOpen} />
+      <ShelfList items={items} contents={contents} fresh={fresh} pulse={pulse} openId={openId} onOpen={onOpen} />
     </section>
   )
 }
 
-function ShelfList({ items, contents, openId, onOpen }: Omit<Props, 'shopName'>) {
+function ShelfList({ items, contents, fresh, pulse, openId, onOpen }: Omit<Props, 'shopName'>) {
   return (
     <ul className="shelf">
       {items.map((item) => (
@@ -39,6 +43,14 @@ function ShelfList({ items, contents, openId, onOpen }: Omit<Props, 'shopName'>)
             className={item.id === openId ? 'card open' : 'card'}
             onClick={() => onOpen(item.id)}
           >
+            {!!fresh?.[item.id] && (
+              <>
+                <span key={`g${pulse}`} className="glow" aria-hidden="true" />
+                <span key={`p${pulse}`} className="plus">
+                  ＋{fresh[item.id]}
+                </span>
+              </>
+            )}
             <span className="ic">{item.icon}</span>
             <span>
               {item.title}
@@ -47,7 +59,7 @@ function ShelfList({ items, contents, openId, onOpen }: Omit<Props, 'shopName'>)
           </button>
           {item.children && (
             <div className="inner">
-              <ShelfList items={item.children} contents={contents} openId={openId} onOpen={onOpen} />
+              <ShelfList items={item.children} contents={contents} fresh={fresh} pulse={pulse} openId={openId} onOpen={onOpen} />
             </div>
           )}
         </li>

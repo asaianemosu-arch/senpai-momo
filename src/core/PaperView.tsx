@@ -16,6 +16,8 @@ interface Props {
   onOpen: (id: string) => void
   // On a phone the paper slides up over the conversation and can be closed.
   onClose?: () => void
+  // Bundles Momo just wrote or fixed, tagged until the chef has looked.
+  fresh?: Record<string, 'new' | 'fix'>
 }
 
 // The chef fixes the paper one part at a time: the ✏️ beside a part opens
@@ -249,10 +251,14 @@ export function PaperView(props: Props) {
               const b = work && open && 'b' in open && open.b === bi ? work : shown
               const facts = b.facts ?? []
               return (
-                <details key={`${item.id}-${bi}`} className="bundle" open>
+                <details key={`${item.id}-${bi}`} className={props.fresh?.[shown.title] ? `bundle ${props.fresh[shown.title]}` : 'bundle'} open>
                   <summary>
                     <span className="ic">{b.icon}</span>
-                    <span className="grow">{b.title}</span>
+                    <span className="grow">
+                      {b.title}
+                      {props.fresh?.[shown.title] === 'new' && <span className="mark new">NEW</span>}
+                      {props.fresh?.[shown.title] === 'fix' && <span className="mark fix">直した</span>}
+                    </span>
                     {b.time && <span className="time-chip">🕐 {b.time}</span>}
                     {!!b.days?.length && <span className="week">{b.days.join('・')}</span>}
                     {/* Kept together so a wrap never leaves the arrow alone on a line. */}

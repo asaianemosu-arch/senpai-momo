@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Focus, HygieneDay, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
+import type { Bundle, Focus, HygieneDay, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
 import type { Handed } from './core/files'
@@ -51,6 +51,20 @@ function now() {
   return `${today()}（${day}）${time}`
 }
 
+// What a bundle says, leaving out what Momo may restate without changing
+// anything (icons, the folded one-liner, empty fields).
+function gist(b: Bundle): string {
+  return JSON.stringify([
+    b.time || '',
+    b.days ?? [],
+    (b.facts ?? []).map((f) => [f.label, f.text]),
+    b.note || '',
+    b.photo?.id ?? '',
+    b.steps.map((s) => [s.text, s.why || '', !!s.remind, s.photo ?? '']),
+    b.tips.map((t) => [t.label, t.text]),
+  ])
+}
+
 const ROLES: { role: Role; icon: string; label: string }[] = [
   { role: 'chef', icon: '🧑‍🍳', label: 'シェフ（教える）' },
   { role: 'staff', icon: '🙋', label: 'スタッフ（聞く）' },
@@ -64,6 +78,11 @@ export function App() {
   // The version last handed out to the staff; they only ever see this.
   const [published, setPublished] = usePersistent<Record<string, PaperBody>>('published', {})
   const [reviewing, setReviewing] = useState(false)
+  // What Momo just wrote and the chef has not looked at yet: per part of the
+  // shelf, each bundle new or fixed. The part glows and the bundles are tagged.
+  const [fresh, setFresh] = usePersistent<Record<string, Record<string, 'new' | 'fix'>>>('fresh', {})
+  // Bumped each time Momo writes, so the glow plays again.
+  const [pulse, setPulse] = useState(0)
   const [waiting, setWaiting] = useState(false)
   const [writingCount, setWritingCount] = useState(0)
   // The steps Momo last pointed to for staff; that bundle opens on their paper.
@@ -109,6 +128,20 @@ export function App() {
   // Paper writing runs after the reply; it reads the newest manual from here.
   const latest = useRef({ manual, asks })
   latest.current = { manual, asks }
+
+  // Marks go once the chef has looked: when leaving the part that was open.
+  const wasOpen = useRef(openId)
+  useEffect(() => {
+    const left = wasOpen.current
+    wasOpen.current = openId
+    if (left !== openId && fresh[left]) {
+      setFresh((all) => {
+        const next = { ...all }
+        delete next[left]
+        return next
+      })
+    }
+  }, [openId])
 
   const messages = role === 'chef' ? chefLog : staffLog
   const setMessages = role === 'chef' ? setChefLog : setStaffLog
@@ -203,6 +236,22 @@ export function App() {
       })
       setAsks(res.asks)
       if (res.updates.length === 0) return
+      const before = latest.current.manual
+      setFresh((all) => {
+        const next = { ...all }
+        for (const u of res.updates) {
+          const marks = { ...(next[u.section] ?? {}) }
+          const old = before[u.section]?.bundles ?? []
+          for (const b of u.bundles) {
+            const was = old.find((o) => o.title === b.title)
+            if (!was) marks[b.title] = 'new'
+            else if (gist(was) !== gist(b) && marks[b.title] !== 'new') marks[b.title] = 'fix'
+          }
+          if (Object.keys(marks).length) next[u.section] = marks
+        }
+        return next
+      })
+      setPulse((n) => n + 1)
       setManual((all) => {
         const next = { ...all }
         for (const u of res.updates) {
@@ -241,11 +290,18 @@ export function App() {
     </div>
   )
 
+  // How many bundles in each part are new or fixed, for the chef.
+  const freshCount: Record<string, number> = {}
+  if (role === 'chef') for (const [id, marks] of Object.entries(fresh)) freshCount[id] = Object.keys(marks).length
+  const freshTotal = Object.values(freshCount).reduce((a, b) => a + b, 0)
+
   const shelf = (
     <Shelf
       shopName={trade.shopName}
       items={trade.shelf}
       contents={contents}
+      fresh={freshCount}
+      pulse={pulse}
       openId={item.id}
       onOpen={(id) => {
         setOpenId(id)
@@ -271,6 +327,11 @@ export function App() {
         return <ShowCard focus={m.show} where={titleOf(m.show.section)} bundle={bundle} />
       }}
       onSend={send}
+      places={trade.shelf.map((s) => ({ id: s.id, title: s.title }))}
+      onOpenPlace={(id) => {
+        setOpenId(id)
+        if (narrow) setPaperOpen(true)
+      }}
       onShowPaper={
         narrow
           ? (id) => {
@@ -326,6 +387,7 @@ export function App() {
       titleOf={titleOf}
       onOpen={setOpenId}
       onClose={narrow ? () => setPaperOpen(false) : undefined}
+      fresh={role === 'chef' ? fresh[item.id] : undefined}
     />
   )
 
@@ -356,6 +418,11 @@ export function App() {
           <div className="mbar">
             <button type="button" className="icon-btn" aria-label="お店のマニュアル" onClick={() => setShelfOpen(true)}>
               📚
+              {freshTotal > 0 && (
+                <span key={pulse} className="badge">
+                  ＋{freshTotal}
+                </span>
+              )}
             </button>
             <div className="mbar-momo">
               <img src={momoUrl} alt="" className="light-target" />

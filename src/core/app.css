@@ -608,3 +608,24 @@ details.bundle > summary .head-tail .count { margin-left: 0; }
 .narrow .page-stack { border-radius: 0; }
 .hy-plan { table-layout: fixed; }
 .hy-plan td, .hy-plan th { overflow-wrap: anywhere; }
+
+/* what Momo just wrote: the part glows, the bundles are tagged */
+.card { position: relative; }
+.card .glow { position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; animation: glow 1.6s ease-in-out 3; }
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 211, 107, 0); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 211, 107, .75), 0 0 18px rgba(255, 190, 60, .6); }
+}
+.card .plus, .icon-btn .badge {
+  position: absolute; right: 8px; top: 6px; background: var(--accent); color: #fff; border-radius: 99px;
+  font-size: 11px; font-weight: 700; padding: 0 7px; line-height: 1.6; animation: pop .35s ease-out;
+}
+.icon-btn { position: relative; }
+.icon-btn .badge { right: -8px; top: -6px; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+details.bundle.new { background: #fffaf0; border-color: #ffd36b; }
+details.bundle.fix { background: #f6f9fd; border-color: #b9d2ec; }
+.mark { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 99px; padding: 0 8px; margin-left: 6px; vertical-align: middle; }
+.mark.new { background: #ffd36b; color: #6b4a00; }
+.mark.fix { background: #e6f0fb; color: #2d5a8a; }
+.filed .place { border: none; background: none; padding: 0; font: inherit; color: inherit; text-decoration: underline dotted; cursor: pointer; }
