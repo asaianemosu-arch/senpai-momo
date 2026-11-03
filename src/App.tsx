@@ -101,6 +101,8 @@ export function App() {
   // The daily hygiene record, day by day ("2026-11-04").
   const [hygiene, setHygiene] = usePersistent<Record<string, HygieneDay>>('hygiene', {})
   // ☑️ What staff ticked off today, by part. Only today is kept.
+  // Who the chef side says is speaking now (お話し中 ▾), until they speak.
+  const [picked, setPicked] = useState<string | null>(null)
   // The hygiene round a checklist sent staff to record.
   const [round, setRound] = useState<HygieneTime | undefined>(undefined)
   const [checks, setChecks] = usePersistent<{ date: string; done: Record<string, string[]> }>('checks', { date: '', done: {} })
@@ -177,8 +179,16 @@ export function App() {
 
   async function send(text: string, handed?: Handed) {
     // Until Momo replies, the words are taken as said by whoever spoke last.
-    const before = role === 'chef' ? [...messages].reverse().find((m) => m.from === 'chef' && m.speaker)?.speaker : undefined
-    const said: Message = { from: role, text, ...(handed && { attach: handed.attach }), ...(before && { speaker: before }) }
+    // A speaker chosen on screen wins; otherwise, whoever spoke last.
+    const before = role === 'chef' ? (picked ?? [...messages].reverse().find((m) => m.from === 'chef' && m.speaker)?.speaker) : undefined
+    const said: Message = {
+      from: role,
+      text,
+      ...(handed && { attach: handed.attach }),
+      ...(before && { speaker: before }),
+      ...(role === 'chef' && picked && { picked: true }),
+    }
+    setPicked(null)
     let log: Message[] = [...messages, said]
     const ask = { role, localTime: now(), openSection: item.id }
     setMessages(log)
@@ -200,7 +210,7 @@ export function App() {
         const attach = { ...handed.attach, text: res.read }
         log = log.map((m, i) => (i === last ? { ...m, attach } : m))
       }
-      if (role === 'chef' && res.speaker) {
+      if (role === 'chef' && res.speaker && !said.picked) {
         log = log.map((m, i) => (i === last ? { ...m, speaker: res.speaker } : m))
       }
       after = [...log, { from: 'momo', text: res.reply, show: res.show }]
@@ -332,6 +342,8 @@ export function App() {
       messages={messages}
       waiting={waiting}
       writing={role === 'chef' && writingCount > 0}
+      picked={picked}
+      onPick={setPicked}
       cardFor={(m) => {
         if (role !== 'staff' || !m.show) return null
         const bundle = published[m.show.section]?.bundles.find((b) => b.title === m.show!.bundle)

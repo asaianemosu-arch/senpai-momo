@@ -90,6 +90,9 @@ export interface Message {
   // Who was speaking on the teaching side, as Momo understood it
   // ("シェフ", "店長（田中さん）", "マダム").
   speaker?: string
+  // The speaker was chosen on screen just before this (お話し中 ▾), so it
+  // is certain, and Momo greets them if they are someone new.
+  picked?: boolean
   // Where Momo put what she heard, shown under her reply.
   filed?: string
   // The first part of the shelf she wrote to, opened by "紙を見る".

@@ -115,6 +115,7 @@ function isValid(body: unknown): body is MomoRequest {
         typeof m.text === 'string' &&
         m.text.length <= MAX_TEXT &&
         (m.speaker === undefined || (typeof m.speaker === 'string' && m.speaker.length <= 40)) &&
+        (m.picked === undefined || typeof m.picked === 'boolean') &&
         (m.attach === undefined || (typeof m.attach?.text === 'string' && m.attach.text.length <= MAX_HANDED)),
     ) &&
     (b.media === undefined || isMedia(b.media)) &&
@@ -175,7 +176,7 @@ function conversation(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
     if (messages.length === 0 && m.from === 'momo') return
     if (m.from === 'momo') return messages.push({ role: 'assistant', content: m.text })
     // Who spoke, as Momo understood it at the time, so she keeps track of changes.
-    const who = req.role === 'chef' && m.speaker ? `【${m.speaker}】` : ''
+    const who = req.role === 'chef' && m.speaker ? `【${m.speaker}${m.picked ? '・画面で代わりました' : ''}】` : ''
     const words = who + [m.attach && handed(m.attach), m.text].filter(Boolean).join('\n')
     // A photo or PDF goes with the turn it was handed over in, once.
     if (i === last && req.media) {

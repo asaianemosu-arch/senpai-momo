@@ -664,3 +664,20 @@ details.bundle.fix { background: #f6f9fd; border-color: #b9d2ec; }
 .restart-go { display: flex; gap: 8px; justify-content: flex-end; }
 .restart-go button { text-decoration: none; font-size: 13px; border: 1px solid var(--line); border-radius: 99px; padding: 4px 14px; color: var(--ink); }
 .restart-go button.go { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* teaching side: "〇〇とお話し中 ▾" chooses who is speaking */
+.chat header.speakers { position: relative; padding: 0; }
+.speakers-now { width: 100%; text-align: left; border: none; background: none; font: inherit; font-weight: 700; padding: 14px 22px; cursor: pointer; color: var(--ink); }
+.speakers-now .chev { color: var(--mute); font-size: 13px; margin-left: 4px; }
+.speakers-menu { position: absolute; z-index: 5; top: 100%; left: 16px; width: min(320px, calc(100% - 32px)); background: var(--pane); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(59, 42, 38, .12); padding: 10px; display: flex; flex-direction: column; gap: 4px; font-weight: 400; font-size: 15px; }
+.speakers-menu small { color: var(--mute); font-size: 12px; margin: 0 4px 2px; }
+.speakers-menu > button { text-align: left; border: 1px solid transparent; background: none; border-radius: 10px; padding: 7px 10px; font: inherit; cursor: pointer; }
+.speakers-menu > button:hover { background: var(--side); }
+.speakers-menu > button.on { background: var(--accent-soft); border-color: var(--accent-soft); font-weight: 700; }
+.speakers-other { display: flex; gap: 6px; margin-top: 4px; }
+.speakers-other input { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; font: inherit; font-size: 14px; }
+.speakers-other button { border: none; background: var(--accent); color: #fff; border-radius: 10px; padding: 6px 12px; font: inherit; font-size: 14px; }
+.speakers-other button:disabled { opacity: .4; }
+/* On a phone the plain header is hidden, but who is speaking stays choosable. */
+.narrow .chat header.speakers { display: block; }
+.narrow .speakers-now { padding: 8px 16px; font-size: 14px; }

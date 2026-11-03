@@ -22,6 +22,9 @@ interface Props {
   // The parts of the shelf, so 『クローズ』 in "where Momo wrote" opens it.
   places?: { id: string; title: string }[]
   onOpenPlace?: (id: string) => void
+  // Teaching side: who is speaking now, chosen on screen (until they speak).
+  picked?: string | null
+  onPick?: (speaker: string) => void
 }
 
 const HEADER: Record<Role, string> = {
@@ -47,7 +50,7 @@ const FACE: Record<Role, string> = {
   staff: '🙋',
 }
 
-export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShowPaper, places, onOpenPlace }: Props) {
+export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShowPaper, places, onOpenPlace, picked, onPick }: Props) {
   const [draft, setDraft] = useState('')
   const [hint, setHint] = useState('')
   const [sheet, setSheet] = useState<'paste' | 'photo' | null>(null)
@@ -116,12 +119,18 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
     else ear.start(draft)
   }
 
-  // On the teaching side, whoever Momo last understood was speaking.
-  const speaker = role === 'chef' ? [...messages].reverse().find((m) => m.from === 'chef' && m.speaker)?.speaker : undefined
+  // On the teaching side, whoever was chosen, or Momo last understood was speaking.
+  const speaker =
+    role === 'chef' ? (picked ?? [...messages].reverse().find((m) => m.from === 'chef' && m.speaker)?.speaker) : undefined
+  const header = speaker && speaker !== 'シェフ' ? `${speaker}とお話し中` : HEADER[role]
 
   return (
     <section className="chat">
-      <header>{speaker && speaker !== 'シェフ' ? `${speaker}とお話し中` : HEADER[role]}</header>
+      {role === 'chef' && onPick ? (
+        <Speakers header={header} now={speaker ?? 'シェフ'} messages={messages} onPick={onPick} />
+      ) : (
+        <header>{header}</header>
+      )}
 
       <div className="log" ref={logRef}>
         {messages.map((m, i) => (
@@ -259,4 +268,46 @@ function linkPlaces(text: string, places?: { id: string; title: string }[], open
       part
     )
   })
+}
+
+// "〇〇とお話し中 ▾": the teaching side says who is speaking now. The
+// people already heard are offered, and anyone else by name.
+function Speakers({ header, now, messages, onPick }: { header: string; now: string; messages: Message[]; onPick: (s: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [other, setOther] = useState('')
+  const known = ['シェフ', ...new Set(messages.flatMap((m) => (m.from === 'chef' && m.speaker && m.speaker !== 'シェフ' ? [m.speaker] : [])))]
+  const pick = (s: string) => {
+    onPick(s)
+    setOpen(false)
+    setOther('')
+  }
+  return (
+    <header className="speakers">
+      <button type="button" className="speakers-now" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+        {header} <span className="chev">▾</span>
+      </button>
+      {open && (
+        <div className="speakers-menu">
+          <small>いま話している人</small>
+          {known.map((s) => (
+            <button key={s} type="button" className={s === now ? 'on' : ''} onClick={() => pick(s)}>
+              {s === 'シェフ' ? '🧑‍🍳' : '🧑‍💼'} {s}
+            </button>
+          ))}
+          <form
+            className="speakers-other"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (other.trim()) pick(other.trim().slice(0, 40))
+            }}
+          >
+            <input value={other} placeholder="ほかの人（例：マダム）" onChange={(e) => setOther(e.target.value)} />
+            <button type="submit" disabled={!other.trim()}>
+              代わる
+            </button>
+          </form>
+        </div>
+      )}
+    </header>
+  )
 }
