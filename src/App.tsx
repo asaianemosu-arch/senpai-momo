@@ -126,7 +126,10 @@ export function App() {
   }
 
   async function send(text: string, handed?: Handed) {
-    let log: Message[] = [...messages, handed ? { from: role, text, attach: handed.attach } : { from: role, text }]
+    // Until Momo replies, the words are taken as said by whoever spoke last.
+    const before = role === 'chef' ? [...messages].reverse().find((m) => m.from === 'chef' && m.speaker)?.speaker : undefined
+    const said: Message = { from: role, text, ...(handed && { attach: handed.attach }), ...(before && { speaker: before }) }
+    let log: Message[] = [...messages, said]
     const ask = { role, localTime: now(), openSection: item.id }
     setMessages(log)
     setWaiting(true)

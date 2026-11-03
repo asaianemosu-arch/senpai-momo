@@ -270,7 +270,9 @@ async function write(client: Anthropic, req: MomoRequest): Promise<WriteResponse
           link: SECTIONS.includes(st.link) && st.link !== u.section ? st.link : null,
           photo: photos.has(st.photo) ? st.photo : undefined,
         })),
-      })),
+      }))
+        // A bundle with nothing in it is left off the paper.
+        .filter((b) => b.steps.length || b.facts.length || b.note || b.photo),
     })),
     filed: turn.filed,
     asks: turn.asks.slice(0, MAX_ASKS),
