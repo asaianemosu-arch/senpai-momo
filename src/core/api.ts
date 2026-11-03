@@ -34,6 +34,8 @@ export interface TalkResponse {
   show?: Focus
   // What Momo read in a photo or PDF handed over this turn.
   read?: string
+  // Who Momo understands is speaking now, on the teaching side.
+  speaker?: string
 }
 
 export interface WriteResponse {

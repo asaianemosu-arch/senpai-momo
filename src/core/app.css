@@ -534,3 +534,7 @@ details.hist summary { cursor: pointer; }
 .fact-in input { font-size: 16px; }
 details.bundle > summary { flex-wrap: wrap; }
 details.bundle > summary .grow { min-width: 8em; }
+
+/* who was speaking on the teaching side */
+.who-col { display: flex; flex-direction: column; align-items: center; gap: 2px; flex: none; }
+.who-name { font-size: 11px; color: var(--mute); white-space: nowrap; max-width: 64px; overflow: hidden; text-overflow: ellipsis; }

@@ -140,10 +140,15 @@ export function App() {
         messages: log.slice(-RECENT),
         media: handed?.media,
       })
-      // A photo or PDF is kept as the words Momo read in it.
+      // A photo or PDF is kept as the words Momo read in it, and the words
+      // as said by whoever Momo understood was speaking.
+      const last = log.length - 1
       if (handed?.media && res.read) {
         const attach = { ...handed.attach, text: res.read }
-        log = log.map((m, i) => (i === log.length - 1 ? { ...m, attach } : m))
+        log = log.map((m, i) => (i === last ? { ...m, attach } : m))
+      }
+      if (role === 'chef' && res.speaker) {
+        log = log.map((m, i) => (i === last ? { ...m, speaker: res.speaker } : m))
       }
       after = [...log, { from: 'momo', text: res.reply, show: res.show }]
       setMessages(after)

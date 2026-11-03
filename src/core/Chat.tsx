@@ -34,6 +34,11 @@ const TROUBLE: Record<ListenTrouble | VoiceError['kind'], string> = {
   busy: 'モモの声が混みあっています。少しして押してください。',
 }
 
+// Someone other than the chef on the teaching side (店長, マダム).
+function faceOf(m: Message): string {
+  return m.from === 'chef' && m.speaker && !m.speaker.startsWith('シェフ') ? '🧑‍💼' : FACE[m.from as Role]
+}
+
 const FACE: Record<Role, string> = {
   chef: '🧑‍🍳',
   staff: '🙋',
@@ -108,16 +113,20 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
     else ear.start(draft)
   }
 
+  // On the teaching side, whoever Momo last understood was speaking.
+  const speaker = role === 'chef' ? [...messages].reverse().find((m) => m.from === 'chef' && m.speaker)?.speaker : undefined
+
   return (
     <section className="chat">
-      <header>{HEADER[role]}</header>
+      <header>{speaker && speaker !== 'シェフ' ? `${speaker}とお話し中` : HEADER[role]}</header>
 
       <div className="log" ref={logRef}>
         {messages.map((m, i) => (
           <div key={i}>
             <div className={m.from === 'momo' ? 'msg' : 'msg me'}>
-              <div className="who">
-                {m.from === 'momo' ? <img src={momoUrl} alt="" /> : FACE[m.from]}
+              <div className="who-col">
+                <div className="who">{m.from === 'momo' ? <img src={momoUrl} alt="" /> : faceOf(m)}</div>
+                {m.speaker && <span className="who-name">{m.speaker.replace(/（.*）$/, '')}</span>}
               </div>
               {m.attach ? (
                 <div className="handed-wrap">

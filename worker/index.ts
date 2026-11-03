@@ -40,6 +40,7 @@ const SECTION_LIST = bakery.shelf
 const Talk = z.object({
   reply: z.string(),
   read: z.string(),
+  speaker: z.string(),
   asks: z.array(z.string()),
   show: z.object({
     section: z.enum([...FILED, 'none']),
@@ -100,6 +101,7 @@ function isValid(body: unknown): body is MomoRequest {
       (m) =>
         typeof m.text === 'string' &&
         m.text.length <= MAX_TEXT &&
+        (m.speaker === undefined || (typeof m.speaker === 'string' && m.speaker.length <= 40)) &&
         (m.attach === undefined || (typeof m.attach?.text === 'string' && m.attach.text.length <= MAX_HANDED)),
     ) &&
     (b.media === undefined || isMedia(b.media)) &&
@@ -159,7 +161,9 @@ function conversation(req: MomoRequest): Anthropic.Beta.BetaMessageParam[] {
     // Momo's greeting comes first on screen; the API needs a user turn first.
     if (messages.length === 0 && m.from === 'momo') return
     if (m.from === 'momo') return messages.push({ role: 'assistant', content: m.text })
-    const words = [m.attach && handed(m.attach), m.text].filter(Boolean).join('\n')
+    // Who spoke, as Momo understood it at the time, so she keeps track of changes.
+    const who = req.role === 'chef' && m.speaker ? `【${m.speaker}】` : ''
+    const words = who + [m.attach && handed(m.attach), m.text].filter(Boolean).join('\n')
     // A photo or PDF goes with the turn it was handed over in, once.
     if (i === last && req.media) {
       const media: Anthropic.Beta.BetaContentBlockParam =
@@ -211,7 +215,12 @@ async function talk(client: Anthropic, req: MomoRequest): Promise<TalkResponse> 
       show: pointTo(req, turn.show),
     }
   }
-  return { reply: turn.reply, asks: req.asks, read: req.media ? turn.read.slice(0, MAX_HANDED) : undefined }
+  return {
+    reply: turn.reply,
+    asks: req.asks,
+    read: req.media ? turn.read.slice(0, MAX_HANDED) : undefined,
+    speaker: turn.speaker.trim().slice(0, 40) || undefined,
+  }
 }
 
 // Keep only a pointer to steps that really exist in the manual the staff see.
