@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Bundle, Focus, HygieneDay, HygieneTime, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
+import { loadSample, startBlank } from './core/sample'
 import { RelayError, askMomo } from './core/api'
 import type { Handed } from './core/files'
 import { Shelf } from './core/Shelf'
@@ -308,6 +309,11 @@ export function App() {
       fresh={freshCount}
       pulse={pulse}
       openId={item.id}
+      onRestart={async (to) => {
+        if (to === 'sample') await loadSample()
+        else startBlank()
+        location.reload()
+      }}
       onOpen={(id) => {
         setOpenId(id)
         setRound(undefined)

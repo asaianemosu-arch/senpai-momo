@@ -114,6 +114,13 @@ export interface Trade {
   seeds?: Record<string, PaperBody>
 }
 
+// A shop already talked into shape, for visitors to start from: what the
+// browser keeps, by key, and the photos the paper uses (id → file).
+export interface Sample {
+  store: Record<string, unknown>
+  photos: Record<string, string>
+}
+
 // The daily hygiene record, in the form a trade's official guide gives
 // (for bakeries, the 日報型 記録様式). Questions are the guide's own words.
 export type HygieneTime = 'morning' | 'lunch' | 'close'

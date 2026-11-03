@@ -33,6 +33,11 @@ export async function keepPhoto(base64: string): Promise<string> {
   return id
 }
 
+// A photo that comes with the sample shop, kept under its own id.
+export async function putPhoto(id: string, blob: Blob): Promise<void> {
+  await run('readwrite', (s) => s.put(blob, id))
+}
+
 const urls = new Map<string, Promise<string | null>>()
 
 function urlOf(id: string): Promise<string | null> {

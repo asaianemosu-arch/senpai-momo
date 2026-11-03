@@ -24,3 +24,27 @@ export function usePersistent<T>(key: string, fallback: T) {
   }, [key, value])
   return [value, setValue] as const
 }
+
+function ours(): string[] {
+  try {
+    return Object.keys(localStorage).filter((k) => k.startsWith(PREFIX))
+  } catch {
+    return []
+  }
+}
+
+// Nothing kept yet: someone opening Momo for the first time.
+export function firstVisit(): boolean {
+  return ours().length === 0
+}
+
+// Starts over: everything kept is dropped, then `store` (key → value) is kept.
+// The page is reloaded after this, so nothing on screen writes the old back.
+export function startOver(store: Record<string, unknown>) {
+  try {
+    for (const k of ours()) localStorage.removeItem(k)
+    for (const [k, v] of Object.entries(store)) localStorage.setItem(PREFIX + k, JSON.stringify(v))
+  } catch {
+    // ignore: storage is unavailable, the app starts empty as before
+  }
+}

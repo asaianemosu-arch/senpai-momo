@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ShelfItem } from './types'
 import momoUrl from '../../assets/momo/01.png'
 
@@ -12,9 +13,18 @@ interface Props {
   pulse?: number
   openId: string
   onOpen: (id: string) => void
+  // Back to the sample shop, or a shop with nothing written yet.
+  onRestart?: (to: Restart) => void
 }
 
-export function Shelf({ shopName, items, contents, fresh, pulse, openId, onOpen }: Props) {
+type Restart = 'sample' | 'blank'
+
+const RESTART: Record<Restart, { label: string; ask: string; go: string }> = {
+  sample: { label: '見本に戻す', ask: 'もふもふベーカリーの見本に戻します。いまの会話と紙は消えます。', go: '戻す' },
+  blank: { label: 'まっさらのお店で試す', ask: '何も書かれていないお店から、シェフとして始めます。いまの会話と紙は消えます。', go: '始める' },
+}
+
+export function Shelf({ shopName, items, contents, fresh, pulse, openId, onOpen, onRestart }: Props) {
   return (
     <section className="side">
       <div className="momo">
@@ -29,7 +39,37 @@ export function Shelf({ shopName, items, contents, fresh, pulse, openId, onOpen 
 
       <div className="shelf-title">お店のマニュアル</div>
       <ShelfList items={items} contents={contents} fresh={fresh} pulse={pulse} openId={openId} onOpen={onOpen} />
+      {onRestart && <Restarts onRestart={onRestart} />}
     </section>
+  )
+}
+
+// Quiet, at the bottom: asks once before anything is dropped.
+function Restarts({ onRestart }: { onRestart: (to: Restart) => void }) {
+  const [asking, setAsking] = useState<Restart | null>(null)
+  if (asking) {
+    return (
+      <div className="restart asking">
+        <p>{RESTART[asking].ask}</p>
+        <div className="restart-go">
+          <button type="button" className="go" onClick={() => onRestart(asking)}>
+            {RESTART[asking].go}
+          </button>
+          <button type="button" onClick={() => setAsking(null)}>
+            やめる
+          </button>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div className="restart">
+      {(Object.keys(RESTART) as Restart[]).map((to) => (
+        <button key={to} type="button" onClick={() => setAsking(to)}>
+          {RESTART[to].label}
+        </button>
+      ))}
+    </div>
   )
 }
 
