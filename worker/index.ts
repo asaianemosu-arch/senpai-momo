@@ -16,6 +16,7 @@ interface Env {
   MOMO_VOICE_ID?: string
   // Asks per person per minute (wrangler.jsonc).
   MOMO_LIMIT?: RateLimit
+  WRITE_LIMIT?: RateLimit
   VOICE_LIMIT?: RateLimit
 }
 
@@ -346,11 +347,14 @@ export default {
     if (url.pathname !== '/api/momo' || request.method !== 'POST') {
       return new Response('Not found', { status: 404 })
     }
-    if (!(await allowed(env.MOMO_LIMIT, request))) return BUSY()
     if (!env.ANTHROPIC_API_KEY) {
       return Response.json({ error: 'not_configured' }, { status: 503 })
     }
     const body = await request.json().catch(() => null)
+    // Replies and papers are counted apart: a paper follows each reply, and
+    // its own limit sits above what replies allow, so a reply never loses its paper.
+    const write = isValid(body) && body.step === 'write'
+    if (!(await allowed(write ? env.WRITE_LIMIT : env.MOMO_LIMIT, request))) return BUSY()
     if (!isValid(body)) {
       return Response.json({ error: 'bad_request' }, { status: 400 })
     }
