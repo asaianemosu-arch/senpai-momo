@@ -9,7 +9,8 @@ export const bakery: Trade = {
     // the chef mentions in the other parts.
     { id: 'day', icon: '🕐', title: '1日の流れ', note: '時間割', timetable: true },
     { id: 'open', icon: '☀️', title: 'オープン前' },
-    { id: 'service', icon: '🛎️', title: '営業中', note: '製造も販売も' },
+    { id: 'service', icon: '🛎️', title: '営業中', note: '段取り・包む・お知らせ・お客さん' },
+    { id: 'recipe', icon: '📖', title: 'レシピ', note: 'パンごとの作り方', untimed: true },
     { id: 'close', icon: '🌙', title: 'クローズ' },
     { id: 'hygiene', icon: '🌡️', title: '衛生の記録', note: '冷蔵庫・冷凍庫の温度など' },
   ],

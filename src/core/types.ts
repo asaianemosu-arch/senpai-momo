@@ -9,6 +9,8 @@ export interface ShelfItem {
   note?: string
   // A view built from the other parts (the day's timetable), not a place to file work.
   timetable?: boolean
+  // How things are made, not when (recipes): left off the timetable.
+  untimed?: boolean
   children?: ShelfItem[]
 }
 

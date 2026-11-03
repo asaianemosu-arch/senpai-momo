@@ -35,7 +35,7 @@ function today(): Weekday {
 
 export function Timetable({ item, shelf, manual, onPick, onClose }: Props) {
   const [day, setDay] = useState<Weekday>(today)
-  const parts = shelf.filter((s) => !s.timetable)
+  const parts = shelf.filter((s) => !s.timetable && !s.untimed)
   const order = parts.map((s) => s.id)
   const timed: Entry[] = []
   const untimed: Entry[] = []
