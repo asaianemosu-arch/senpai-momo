@@ -58,7 +58,14 @@ export function StaffPaper({ item, paper, focus, titleOf, onOpen, onClose }: Pro
                         {b.time && <span className="time-chip">🕐 {b.time}</span>}
                         {!!b.days?.length && <span className="week">{b.days.join('・')}</span>}
                       </b>
-                      {!open && <small>{b.summary || b.steps.slice(0, 2).map((s) => s.text).join('、')}</small>}
+                      {!open && (
+                        <small>
+                          {b.summary ||
+                            (b.steps.length
+                              ? b.steps.slice(0, 2).map((s) => s.text).join('、')
+                              : (b.facts ?? []).map((f) => `${f.label}：${f.text}`).join('、'))}
+                        </small>
+                      )}
                     </span>
                     <span className="chev">{open ? '▾' : '▸'}</span>
                   </button>

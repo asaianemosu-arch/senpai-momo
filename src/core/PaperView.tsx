@@ -256,7 +256,7 @@ export function PaperView(props: Props) {
                     {b.time && <span className="time-chip">🕐 {b.time}</span>}
                     {!!b.days?.length && <span className="week">{b.days.join('・')}</span>}
                     {pen(bi, 'head')}
-                    <span className="count">{b.steps.length}つ</span>
+                    {b.steps.length > 0 && <span className="count">{b.steps.length}つ</span>}
                     <span className="chev">▸</span>
                   </summary>
                   <div className="body">
