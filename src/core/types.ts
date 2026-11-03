@@ -11,6 +11,8 @@ export interface ShelfItem {
   timetable?: boolean
   // How things are made, not when (recipes): left off the timetable.
   untimed?: boolean
+  // The daily hygiene record: staff record it here with Momo.
+  record?: boolean
   children?: ShelfItem[]
 }
 
@@ -102,6 +104,53 @@ export interface Trade {
   shopName: string
   shelf: ShelfItem[]
   greetings: Record<Role, string>
+  hygiene: HygieneForm
+}
+
+// The daily hygiene record, in the form a trade's official guide gives
+// (for bakeries, the 日報型 記録様式). Questions are the guide's own words.
+export type HygieneTime = 'morning' | 'lunch' | 'close'
+
+export interface HygieneItem {
+  id: string
+  text: string
+  // When Momo asks it; none when the shop keeps it elsewhere.
+  when: HygieneTime[]
+  // Shown in 特記事項 when kept elsewhere ("別のシートで管理").
+  elsewhere?: string
+  // Numbers to enter, each with its upper limit (℃).
+  temps?: { id: string; label: string; max: number }[]
+  // Done many times a day (toilet every hour): times are kept as it happens.
+  hourly?: boolean
+}
+
+export interface HygieneGroup {
+  title: string
+  // A sub-heading inside the second half (アレルゲン対策 ...).
+  part?: string
+  items: HygieneItem[]
+}
+
+export interface HygieneForm {
+  title: string
+  groups: HygieneGroup[]
+  source: string
+}
+
+export interface HygieneAnswer {
+  // true ◯, false ×, null 当てはまらない
+  ok: boolean | null
+  at: string
+  memo?: string
+  temps?: Record<string, number>
+}
+
+export interface HygieneDay {
+  // Keyed by "itemId@time" (the same item may be asked twice a day).
+  answers: Record<string, HygieneAnswer>
+  hourly: Record<string, string[]>
+  recorder?: string
+  checkedBy?: string
 }
 
 // What the chef hands Momo with 📋 貼る or ✍️ 手書きを読む. The file itself is

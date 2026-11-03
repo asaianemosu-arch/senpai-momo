@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Focus, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
+import type { Focus, HygieneDay, Manual, Message, Paper, PaperBody, Role, ShelfItem } from './core/types'
 import { usePersistent } from './core/storage'
 import { askMomo } from './core/api'
 import type { Handed } from './core/files'
@@ -12,6 +12,7 @@ import { Timetable } from './core/Timetable'
 import { Splash } from './core/Splash'
 import { Review, changesSince } from './core/Review'
 import { useNarrow } from './core/useNarrow'
+import { EMPTY_DAY, HygieneRecorder, HygieneSheet, dayKey } from './core/Hygiene'
 import momoUrl from '../assets/momo/01.png'
 import { bakery as trade } from './trades/bakery'
 
@@ -76,6 +77,8 @@ export function App() {
   const [chefLog, setChefLog] = usePersistent<Message[]>('log:chef', [
     { from: 'momo', text: trade.greetings.chef },
   ])
+  // The daily hygiene record, day by day ("2026-11-04").
+  const [hygiene, setHygiene] = usePersistent<Record<string, HygieneDay>>('hygiene', {})
   const [staffLog, setStaffLog] = usePersistent<Message[]>('log:staff', [
     { from: 'momo', text: trade.greetings.staff },
   ])
@@ -240,7 +243,8 @@ export function App() {
         setOpenId(id)
         if (narrow) {
           setShelfOpen(false)
-          setPaperOpen(true)
+          // Staff record hygiene in the middle; the sheet opens from there.
+          if (!(role === 'staff' && findItem(trade.shelf, id)?.record)) setPaperOpen(true)
         }
       }}
     />
@@ -270,7 +274,21 @@ export function App() {
     />
   )
 
-  const paperView = item.timetable ? (
+  const dateKey = dayKey()
+  const day = hygiene[dateKey] ?? EMPTY_DAY
+  const recording = role === 'staff' && !!item.record
+  const center = recording ? (
+    <HygieneRecorder
+      form={trade.hygiene}
+      day={day}
+      onChange={(next) => setHygiene((all) => ({ ...all, [dateKey]: next }))}
+      onShowSheet={narrow ? () => setPaperOpen(true) : undefined}
+    />
+  ) : (
+    chat
+  )
+
+  const paper = item.timetable ? (
     <Timetable
       item={item}
       shelf={trade.shelf}
@@ -303,6 +321,26 @@ export function App() {
     />
   )
 
+  // The hygiene record sits on top of what Momo wrote there (what to do when
+  // a temperature is off, and so on).
+  const lastSpeaker = [...chefLog].reverse().find((m) => m.from === 'chef' && m.speaker)?.speaker
+  const paperView = item.record ? (
+    <div className={narrow ? 'page-stack sheet-page' : 'page-stack'}>
+      <HygieneSheet
+        form={trade.hygiene}
+        date={dateKey}
+        day={day}
+        onCheck={
+          role === 'chef' ? () => setHygiene((all) => ({ ...all, [dateKey]: { ...day, checkedBy: lastSpeaker ?? 'シェフ' } })) : undefined
+        }
+        onClose={narrow ? () => setPaperOpen(false) : undefined}
+      />
+      {paper}
+    </div>
+  ) : (
+    paper
+  )
+
   return (
     <div className={['frame', narrow && 'narrow', splash && 'splashing'].filter(Boolean).join(' ')}>
       {narrow ? (
@@ -320,7 +358,7 @@ export function App() {
             </div>
             {roles}
           </div>
-          {chat}
+          {center}
           {shelfOpen && (
             <>
               <div className="dim" onClick={() => setShelfOpen(false)} />
@@ -344,7 +382,7 @@ export function App() {
           </div>
           <div className="app">
             {shelf}
-            {chat}
+            {center}
             {paperView}
           </div>
         </>

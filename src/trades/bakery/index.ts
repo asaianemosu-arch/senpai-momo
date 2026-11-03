@@ -1,4 +1,5 @@
 import type { Trade } from '../../core/types'
+import { BAKERY_HYGIENE } from './hygiene'
 
 // The bakery part. The backbone of the manual is the shop's day;
 // what goes inside each part is heard from the chef, not written here.
@@ -12,8 +13,9 @@ export const bakery: Trade = {
     { id: 'service', icon: '🛎️', title: '営業中', note: '段取り・包む・お知らせ・お客さん' },
     { id: 'recipe', icon: '📖', title: 'レシピ', note: 'パンごとの作り方', untimed: true },
     { id: 'close', icon: '🌙', title: 'クローズ' },
-    { id: 'hygiene', icon: '🌡️', title: '衛生の記録', note: '冷蔵庫・冷凍庫の温度など' },
+    { id: 'hygiene', icon: '🌡️', title: '衛生の記録', note: '冷蔵庫・冷凍庫の温度など', record: true },
   ],
+  hygiene: BAKERY_HYGIENE,
   greetings: {
     chef: 'シェフ、こんにちは！ モモです。\nお仕事のお話、聞かせてもらえたらうれしいです。マイクを押して、いつもの言葉で話してくださいね。',
     staff: 'おつかれさまです！ モモです。\n分からないことがあったら、何度でも聞いてくださいね。',
