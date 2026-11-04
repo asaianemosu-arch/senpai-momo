@@ -62,11 +62,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .light-momo canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .momo-name { font-weight: 700; font-size: 18px; }
 .momo-shop { color: var(--mute); font-size: 13px; }
-.momo-things { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
-.thing {
-  border: 1px solid var(--line); background: var(--pane); border-radius: 99px;
-  padding: 3px 12px; font-size: 13px;
-}
 .shelf-title { margin: 20px 4px 8px; font-size: 13px; color: var(--mute); letter-spacing: .05em; }
 .shelf { list-style: none; margin: 0; padding: 0; }
 .card {

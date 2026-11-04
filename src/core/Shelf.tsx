@@ -31,10 +31,6 @@ export function Shelf({ shopName, items, contents, fresh, pulse, openId, onOpen,
         <img src={momoUrl} alt="モモ" className="light-target" />
         <div className="momo-name">先輩店員 Momo</div>
         <div className="momo-shop">{shopName}</div>
-        <div className="momo-things">
-          <button type="button" className="thing">📒 メモ帳</button>
-          <button type="button" className="thing">🔐 金庫</button>
-        </div>
       </div>
 
       <div className="shelf-title">お店のマニュアル</div>
