@@ -17,11 +17,33 @@ interface Entry {
 
 const PASTELS = ['peach', 'sky', 'lemon', 'mint', 'lilac']
 
-// Where a bundle with only words goes: in the first part of the day
-// ("来たらすぐ") before every clock time, otherwise ("帰る前") after them,
+// Words that tell roughly when ("夕方", "お昼前"): about this many minutes
+// from midnight. "前"/"まで" is a little earlier, "あと"/"すぎ" a little later.
+const ROUGHLY: [string, number][] = [
+  ['ランチ', 720],
+  ['昼', 720],
+  ['午後', 840],
+  ['夕方', 990],
+  ['夜', 1140],
+]
+
+function roughly(time: string): number | undefined {
+  const t = time.normalize('NFKC')
+  const hit = ROUGHLY.find(([w]) => t.includes(w))
+  if (!hit) return undefined
+  if (/前|まで/.test(t)) return hit[1] - 30
+  if (/あと|後|すぎ|過ぎ/.test(t)) return hit[1] + 60
+  return hit[1]
+}
+
+// Where a bundle with only words goes: about its time when the words tell
+// it ("夕方" before the 17時 close); otherwise in the first part of the day
+// ("来たらすぐ") before every clock time, or ("帰る前") after them,
 // in the order of the parts.
 function keyOf(section: ShelfItem, bundle: Bundle, order: string[]): number {
   if (bundle.minutes !== undefined && bundle.minutes >= 0) return bundle.minutes
+  const about = bundle.time ? roughly(bundle.time) : undefined
+  if (about !== undefined) return about
   const at = Math.max(0, order.indexOf(section.id))
   return at === 0 ? -1 : 24 * 60 + at
 }
