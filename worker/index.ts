@@ -329,7 +329,7 @@ async function voice(request: Request, env: Env): Promise<Response> {
       method: 'POST',
       headers: { 'xi-api-key': env.ELEVENLABS_API_KEY, 'content-type': 'application/json' },
       // No reading directions: without them she reads most clearly.
-      body: JSON.stringify({ text, model_id: 'eleven_v4', language_code: 'ja' }),
+      body: JSON.stringify({ text, model_id: 'eleven_v4_turbo', language_code: 'ja' }),
     },
   )
   if (!res.ok) {
