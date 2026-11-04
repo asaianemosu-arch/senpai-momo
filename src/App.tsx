@@ -162,9 +162,9 @@ export function App() {
   // The chef works on the draft; the staff read what was handed out.
   const shown = role === 'chef' ? bodies : published
 
-  const contents: Record<string, string> = {}
+  const contents: Record<string, string[]> = {}
   for (const [id, body] of Object.entries(shown)) {
-    contents[id] = body.bundles.map((b) => b.title).join('・')
+    contents[id] = body.bundles.map((b) => b.title)
   }
 
   function edit(id: string, body: PaperBody, note: string) {

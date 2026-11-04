@@ -70,6 +70,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 10px 12px; margin-bottom: 8px; font-size: 15px;
 }
 .card .ic { font-size: 22px; width: 30px; text-align: center; flex: none; }
+.card-text { flex: 1; min-width: 0; }
 .card small { display: block; color: var(--mute); font-size: 12px; line-height: 1.3; }
 .card.open { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .inner { margin-left: 18px; }

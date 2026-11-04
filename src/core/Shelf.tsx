@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { ShelfItem } from './types'
 import momoUrl from '../../assets/momo/01.png'
 
@@ -6,7 +6,7 @@ interface Props {
   shopName: string
   items: ShelfItem[]
   // What each part already holds (bundle names), shown under its title.
-  contents: Record<string, string>
+  contents: Record<string, string[]>
   // How many bundles Momo just wrote or fixed in each part; those parts glow.
   fresh?: Record<string, number>
   // Bumped each time Momo writes, so the glow plays again.
@@ -88,9 +88,9 @@ function ShelfList({ items, contents, fresh, pulse, openId, onOpen }: Omit<Props
               </>
             )}
             <span className="ic">{item.icon}</span>
-            <span>
+            <span className="card-text">
               {item.title}
-              {(contents[item.id] || item.note) && <small>{contents[item.id] || item.note}</small>}
+              {contents[item.id]?.length ? <Glance titles={contents[item.id]} /> : item.note && <small>{item.note}</small>}
             </span>
           </button>
           {item.children && (
@@ -102,4 +102,43 @@ function ShelfList({ items, contents, fresh, pulse, openId, onOpen }: Omit<Props
       ))}
     </ul>
   )
+}
+
+const LINES = 2
+
+// What a part holds, in two lines at most: as many names as fit, then how
+// many more, so a long part does not push the shelf off the screen.
+function Glance({ titles }: { titles: string[] }) {
+  const box = useRef<HTMLElement>(null)
+  const [shown, setShown] = useState(titles.length)
+  const key = titles.join('\n')
+
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const fit = () => {
+      // Try on a hidden copy, so React keeps the one it drew.
+      const probe = el.cloneNode() as HTMLElement
+      probe.style.cssText = 'position:absolute;visibility:hidden;left:0;right:0'
+      el.parentElement?.appendChild(probe)
+      probe.style.width = `${el.clientWidth}px`
+      const most = parseFloat(getComputedStyle(el).lineHeight) * LINES + 1
+      let n = titles.length
+      probe.textContent = say(titles, n)
+      while (n > 1 && probe.scrollHeight > most) probe.textContent = say(titles, --n)
+      probe.remove()
+      setShown(n)
+    }
+    fit()
+    const watch = new ResizeObserver(fit)
+    watch.observe(el.closest('.card') ?? el)
+    return () => watch.disconnect()
+  }, [key])
+
+  return <small ref={box}>{say(titles, shown)}</small>
+}
+
+function say(titles: string[], shown: number): string {
+  const rest = titles.length - shown
+  return titles.slice(0, shown).join('・') + (rest ? ` … ほか${rest}つ` : '')
 }
