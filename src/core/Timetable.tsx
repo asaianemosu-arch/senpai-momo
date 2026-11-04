@@ -36,14 +36,29 @@ function roughly(time: string): number | undefined {
   return hit[1]
 }
 
-// Where a bundle with only words goes: about its time when the words tell
-// it ("夕方" before the 17時 close); otherwise in the first part of the day
-// ("来たらすぐ") before every clock time, or ("帰る前") after them,
-// in the order of the parts.
-function keyOf(section: ShelfItem, bundle: Bundle, order: string[]): number {
+// When a bundle happens, in minutes from midnight, if its time tells:
+// a clock time, or words that tell roughly ("夕方").
+function clock(bundle: Bundle): number | undefined {
   if (bundle.minutes !== undefined && bundle.minutes >= 0) return bundle.minutes
-  const about = bundle.time ? roughly(bundle.time) : undefined
-  if (about !== undefined) return about
+  return bundle.time ? roughly(bundle.time) : undefined
+}
+
+// Where a bundle goes in the day. Words that tell no time ("レジ締めのあと",
+// "開店前") keep their place on the page: just after the timed bundle above
+// them, or else just before the one below. A part with no times at all goes
+// first if it is the first part of the day ("来たらすぐ"), otherwise after
+// every time ("帰る前"), in the order of the parts.
+function keyOf(section: ShelfItem, bundles: Bundle[], i: number, order: string[]): number {
+  const own = clock(bundles[i])
+  if (own !== undefined) return own
+  for (let j = i - 1; j >= 0; j--) {
+    const m = clock(bundles[j])
+    if (m !== undefined) return m + (i - j) / 100
+  }
+  for (let j = i + 1; j < bundles.length; j++) {
+    const m = clock(bundles[j])
+    if (m !== undefined) return m - (j - i) / 100
+  }
   const at = Math.max(0, order.indexOf(section.id))
   return at === 0 ? -1 : 24 * 60 + at
 }
@@ -63,13 +78,14 @@ export function Timetable({ item, shelf, manual, onPick, onClose }: Props) {
   const untimed: Entry[] = []
   const routineDays = new Set<Weekday>()
   for (const section of parts) {
-    for (const bundle of manual[section.id]?.bundles ?? []) {
+    const bundles = manual[section.id]?.bundles ?? []
+    bundles.forEach((bundle, i) => {
       bundle.days?.forEach((d) => routineDays.add(d))
       // A weekday routine shows only on its days; everything else, every day.
-      if (bundle.days?.length && !bundle.days.includes(day)) continue
-      if (bundle.time) timed.push({ section, bundle, key: keyOf(section, bundle, order) })
+      if (bundle.days?.length && !bundle.days.includes(day)) return
+      if (bundle.time) timed.push({ section, bundle, key: keyOf(section, bundles, i, order) })
       else untimed.push({ section, bundle, key: 0 })
-    }
+    })
   }
   timed.sort((a, b) => a.key - b.key)
 
