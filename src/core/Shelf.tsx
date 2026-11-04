@@ -138,7 +138,8 @@ function Glance({ titles }: { titles: string[] }) {
   return <small ref={box}>{say(titles, shown)}</small>
 }
 
+// The word joiners keep "… ほかNつ" on one line.
 function say(titles: string[], shown: number): string {
   const rest = titles.length - shown
-  return titles.slice(0, shown).join('・') + (rest ? ` … ほか${rest}つ` : '')
+  return titles.slice(0, shown).join('・') + (rest ? ` …\u2060\u00a0ほ\u2060か\u2060${rest}\u2060つ` : '')
 }
