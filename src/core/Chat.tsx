@@ -94,7 +94,13 @@ export function Chat({ role, messages, waiting, writing, onSend, cardFor, onShow
         // Without the database the photo is still read; it just is not pasted.
       }
     }
-    onSend('', h)
+    // Words already in the box go with it ("this is the new one, please").
+    const words = ear.listening ? '' : draft.trim()
+    onSend(words, h)
+    if (words) {
+      setDraft('')
+      said.current = ''
+    }
   }
 
   async function photo(f: File) {
