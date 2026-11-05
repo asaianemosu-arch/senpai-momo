@@ -476,6 +476,23 @@ details.hist summary { cursor: pointer; }
 }
 .bundle-photo .photo-x { right: 8px; top: 8px; width: 32px; height: 32px; font-size: 14px; }
 
+/* 🎬 a step's short video: small and going round; pressed, big */
+.step-video { position: relative; flex: none; display: inline-block; vertical-align: middle; cursor: pointer; }
+.step-video.step-photo { margin-right: 8px; }
+.step-video video, .step-video .v-bad { width: 72px; height: 54px; object-fit: cover; border-radius: 10px; display: block; background: var(--side); }
+.step-video .v-bad { display: grid; place-items: center; font-size: 22px; }
+.step-video.illust { display: block; }
+.step-video.illust video, .step-video.illust .v-bad { width: 100%; height: 100%; border-radius: inherit; }
+.v-play { position: absolute; left: 5px; bottom: 3px; color: #fff; font-size: 10px; text-shadow: 0 0 3px rgba(0, 0, 0, .7); pointer-events: none; }
+.v-len { position: absolute; right: 4px; bottom: 3px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 10px; line-height: 15px; border-radius: 6px; padding: 0 4px; pointer-events: none; }
+.player-dim { position: fixed; inset: 0; z-index: 60; background: rgba(59, 42, 38, .6); display: grid; place-items: center; padding: 16px; }
+.player { position: relative; width: min(720px, 100%); background: var(--pane, #fff); border-radius: 16px; overflow: hidden; }
+.player video { width: 100%; max-height: 70vh; display: block; background: #000; }
+.player .close { position: absolute; right: 10px; top: 10px; z-index: 1; background: #fff; }
+.player-cap { margin: 0; padding: 12px 16px 14px; font-size: 16px; line-height: 1.6; }
+.player-bad { margin: 0; padding: 48px 16px; text-align: center; color: var(--mute); }
+.hand-dim.fixed { position: fixed; z-index: 60; }
+
 /* a recipe's 配合: one material a line */
 .recipe-list { border: 1px solid var(--line); border-radius: 12px; margin: 4px 0 12px; overflow: hidden; background: var(--pane); }
 .recipe-head { background: var(--side); font-size: 13px; font-weight: 700; padding: 4px 12px; color: var(--mute); }

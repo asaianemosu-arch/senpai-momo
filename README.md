@@ -49,6 +49,7 @@ https://app.momo-buddymos.workers.dev
 3. Momo answers in a few seconds. A moment later the line "→ …に入れました" says which page she wrote to, and that part glows on the left.
 4. When someone else takes over (the manager, the owner's wife…), they can just say who they are, or choose the speaker from "〇〇とお話し中 ▾" at the top of the conversation.
 5. To fix a page by hand, press ✏️ next to what you want to change. While Momo is still writing, the ✏️ buttons wait.
+   - When fixing steps, 📷 adds a photo and 🎬 a short video (up to 30 seconds) to a step. The video plays silently in a small frame beside the step, over and over; press it to watch it big.
 6. When a page is ready, press "スタッフに配る" (hand out to staff). You check what is new or changed, one page at a time, then "これで配る". Staff see only what has been handed out.
 
 **Asking (staff)**
@@ -83,6 +84,7 @@ Old Word (.doc) and Pages / Numbers / Keynote files cannot be read: save them as
 - Momo reads the most recent 40 messages of the conversation; what came before is already in the manual and in her notes.
 - Pasted text and text read from files: up to 30,000 characters at a time.
 - Photos are shrunk to 1,568 px on the long side before Momo reads them.
+- Step videos: up to 30 seconds, kept in the browser like photos. Momo cannot watch them; they are for people to see the hands at work. A video taken on an iPhone may not play on some Windows computers.
 - To protect the shared keys, each connection can ask Momo about 20 times a minute (more for her writing) and play about 20 voices a minute; past that, she asks you to wait a minute.
 - Checklist ticks last for the day; the hygiene record is kept day by day.
 - Momo's voice is made only when 🔊 is pressed, and kept while the page is open, so you can play it again.
@@ -187,6 +189,7 @@ https://app.momo-buddymos.workers.dev
 3. モモは数秒で返事をします。少しあとに「→ …に入れました」の一行が出て、どのページに書いたかが分かります。左の棚の、その場所が光ります。
 4. 話す人が代わるとき（店長、マダムなど）は、名乗るだけで大丈夫です。会話の上の「〇〇とお話し中 ▾」から選ぶこともできます。
 5. ページを手で直すときは、直したいところの横の ✏️ を押します。モモが書いているあいだは、✏️ は待っています。
+   - 手順を直すとき、📷 で写真を、🎬 で短い動画（30秒まで）を手順に入れられます。動画は手順の横の小さな枠で、音なしでくり返し流れます。押すと大きく見られます。
 6. ページができたら「スタッフに配る」。新しく書いたところ・直したところを1ページずつ確かめて、「これで配る」。スタッフには、配ったものだけが見えます。
 
 **聞く（スタッフ）**
@@ -221,6 +224,7 @@ https://app.momo-buddymos.workers.dev
 - モモが読むのは、会話の新しいほうから40件です。それより前のことは、マニュアルとモモの心覚えに入っています。
 - 貼った文章や、ファイルから読んだ文字は、1回に3万字まで。
 - 写真は、長い辺を 1568px に縮めてからモモが読みます。
+- 手順の動画は30秒まで。写真と同じく、ブラウザの中にしまいます。モモは動画を見られないので、手もとの動きを人が見るためのものです。iPhone で撮った動画は、Windows のパソコンでは再生できないことがあります。
 - 共有の鍵を守るため、1つの接続から、モモへの質問は1分に約20回（ページを書くぶんは別に多め）、声は1分に約20回までです。超えると、モモが「1分ほど待ってね」とお願いします。
 - チェックリストの ✓ はその日かぎり、衛生の記録は日ごとに残ります。
 - モモの声は 🔊 を押したときだけ作ります。画面を開いているあいだは保存するので、もう一度聞くことも可能です。

@@ -114,7 +114,7 @@ export function Review({ pages, onFix, onPublish, onClose }: Props) {
                     <ol className="steps">
                       {page.bundle.steps.map((s, i) => (
                         <li key={i}>
-                          <StepPhoto id={s.photo} />
+                          <StepPhoto id={s.photo} caption={s.text} />
                           {s.remind && <span className="remind">忘れずに</span>}
                           {s.text}
                           {s.why && <span className="why">{s.why}</span>}

@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { WEEKDAYS, type Bundle, type Paper, type PaperBody, type Role, type ShelfItem, type Weekday } from './types'
 import { Facts, Recipe } from './Timetable'
 import { BundlePhoto, StepPhoto } from './ShowCard'
-import { trouble } from './Handover'
+import { trouble, VideoSheet } from './Handover'
 import { readFile } from './files'
-import { keepPhoto } from './photos'
+import { keepPhoto, keepVideo, VideoTrouble } from './photos'
+import { useNarrow } from './useNarrow'
 
 interface Props {
   role: Role
@@ -87,6 +89,11 @@ export function PaperView(props: Props) {
   // Which step a chosen photo goes to (undefined: the bundle itself).
   const photoFor = useRef<number | undefined>(undefined)
   const picker = useRef<HTMLInputElement>(null)
+  // 🎬: a short video for a step, taken there and then or chosen.
+  const videoCam = useRef<HTMLInputElement>(null)
+  const videoPick = useRef<HTMLInputElement>(null)
+  const [videoSheet, setVideoSheet] = useState(false)
+  const narrow = useNarrow()
   const canEdit = role === 'chef'
   const empty = !paper || (paper.rules.length === 0 && paper.bundles.length === 0)
   const body: PaperBody = { rules: paper?.rules ?? [], bundles: paper?.bundles ?? [] }
@@ -151,6 +158,30 @@ export function PaperView(props: Props) {
     setPhotoNote('')
     photoFor.current = step
     picker.current?.click()
+  }
+
+  function addVideo(step: number) {
+    setPhotoNote('')
+    photoFor.current = step
+    if (narrow) setVideoSheet(true)
+    else videoPick.current?.click()
+  }
+
+  async function videoChosen(file: File) {
+    const step = photoFor.current
+    if (step === undefined) return
+    setPhotoNote('📼 動画を入れています…')
+    try {
+      const id = await keepVideo(file)
+      setPhotoNote('')
+      setOpen((o) => {
+        if (!o || !('work' in o)) return o
+        const w = o.work
+        return { ...o, work: { ...w, steps: w.steps.map((s, i) => (i === step ? { ...s, photo: id } : s)) } }
+      })
+    } catch (e) {
+      setPhotoNote(e instanceof VideoTrouble ? e.message : '動画を入れられませんでした。もう一度ためしてください。')
+    }
   }
 
   async function photoChosen(file: File) {
@@ -219,6 +250,32 @@ export function PaperView(props: Props) {
             if (f) photoChosen(f)
           }}
         />
+        {[videoCam, videoPick].map((ref, i) => (
+          <input
+            key={i}
+            ref={ref}
+            type="file"
+            accept="video/*"
+            capture={i === 0 ? 'environment' : undefined}
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              e.target.value = ''
+              if (f) videoChosen(f)
+            }}
+          />
+        ))}
+        {videoSheet &&
+          createPortal(
+            <VideoSheet
+              onPick={(c) => {
+                setVideoSheet(false)
+                ;(c ? videoCam : videoPick).current?.click()
+              }}
+              onClose={() => setVideoSheet(false)}
+            />,
+            document.body,
+          )}
 
         {empty ? (
           <p className="blank">
@@ -441,7 +498,7 @@ export function PaperView(props: Props) {
                                 忘れずに
                               </label>
                               {s.photo ? (
-                                <StepPhoto id={s.photo}>
+                                <StepPhoto id={s.photo} caption={s.text}>
                                   <button
                                     type="button"
                                     className="photo-x"
@@ -452,9 +509,14 @@ export function PaperView(props: Props) {
                                   </button>
                                 </StepPhoto>
                               ) : (
-                                <button type="button" className="mini-btn" title="写真を足す" onClick={() => addPhoto(si)}>
-                                  📷
-                                </button>
+                                <>
+                                  <button type="button" className="mini-btn" title="写真を足す" onClick={() => addPhoto(si)}>
+                                    📷
+                                  </button>
+                                  <button type="button" className="mini-btn" title="動画を足す" onClick={() => addVideo(si)}>
+                                    🎬
+                                  </button>
+                                </>
                               )}
                               <Mini
                                 onUp={() => setWork({ ...b, steps: move(b.steps, si, si - 1) })}
@@ -476,7 +538,7 @@ export function PaperView(props: Props) {
                       <ol className="steps">
                         {b.steps.map((s, si) => (
                           <li key={si}>
-                            <StepPhoto id={s.photo} />
+                            <StepPhoto id={s.photo} caption={s.text} />
                             {s.remind && <span className="remind">忘れずに</span>}
                             {s.text}
                             {s.why && <span className="why">{s.why}</span>}

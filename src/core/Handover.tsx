@@ -1,3 +1,4 @@
+import { VIDEO_MAX_SEC } from './photos'
 import { useRef, useState } from 'react'
 import type { Attachment } from './types'
 import { ACCEPT, CannotRead, memo, readFile, type Handed } from './files'
@@ -134,6 +135,32 @@ export function PhotoSheet({ onPick, onClose }: { onPick: (camera: boolean) => v
           </button>
         </div>
         <p className="hand-kinds">写真（JPG・PNG・HEIC）や、紙を読み込んだ PDF も選べます</p>
+      </div>
+    </div>
+  )
+}
+
+// 🎬 on a step, on a phone: take a short video there and then, or choose one.
+export function VideoSheet({ onPick, onClose }: { onPick: (camera: boolean) => void; onClose: () => void }) {
+  return (
+    <div className="hand-dim fixed" onClick={onClose}>
+      <div className="hand-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="hand-head">
+          <h3>🎬 手順の動画</h3>
+          <button type="button" className="close" aria-label="閉じる" onClick={onClose}>
+            ✕
+          </button>
+        </div>
+        <p className="hand-lead">手もとの動きを、短く撮ってください。音は出さずに流れます。</p>
+        <div className="hand-choose">
+          <button type="button" onClick={() => onPick(true)}>
+            <b>🎥</b>撮る
+          </button>
+          <button type="button" onClick={() => onPick(false)}>
+            <b>🎞️</b>選ぶ
+          </button>
+        </div>
+        <p className="hand-kinds">{VIDEO_MAX_SEC}秒まで。モモは動画を見られないので、見る人のための動画です</p>
       </div>
     </div>
   )
